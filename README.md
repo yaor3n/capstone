@@ -9,4 +9,7 @@ git clone https://github.com/theducksinapu/capstone && cd capstone
 6. Run `npm install` to install dependencies
 7. Run `npm run dev` to start the development env
 8. Open the sql editor on supabase
-9. Run both of the sql file content inside the sql runner
+9. Run both of the sql file content from this sql folder in this repository inside the sql runner
+10. Turn off email confirmation inside supabase settings -> Authentication > Sign In / Up > Auth Providers > Email > Turn off Confirm Email & Turn off secure email change
+11. Create an account on https://localhost:3000/sign-up
+12. Verify the user has been created in supabase dashboard -> Table Editor > users
