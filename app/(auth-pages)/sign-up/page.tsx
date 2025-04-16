@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { SmtpMessage } from "../smtp-message";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default async function Signup(props: {
   searchParams: Promise<Message>;
@@ -39,13 +40,21 @@ export default async function Signup(props: {
             minLength={6}
             required
           />
+          <div className="flex items-center space-x-2">
+            <Checkbox id="isLecturer" />
+            <label
+              htmlFor="isLecturer"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              I am a lecturer 👨‍🏫
+            </label>
+          </div>
           <SubmitButton formAction={signUpAction} pendingText="Signing up...">
             Sign up
           </SubmitButton>
           <FormMessage message={searchParams} />
         </div>
       </form>
-      <SmtpMessage />
     </>
   );
 }

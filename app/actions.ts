@@ -8,6 +8,8 @@ import { redirect } from "next/navigation";
 export const signUpAction = async (formData: FormData) => {
   const email = formData.get("email")?.toString();
   const password = formData.get("password")?.toString();
+  const isLecturer = formData.get("isLecturer")?.toString();
+  console.log({ isLecturer });
   const supabase = await createClient();
   const origin = (await headers()).get("origin");
 
@@ -24,17 +26,22 @@ export const signUpAction = async (formData: FormData) => {
     password,
     options: {
       emailRedirectTo: `${origin}/auth/callback`,
+      data: {
+        username: "lol",
+        email,
+        role: "student maybe",
+      },
     },
   });
 
   if (error) {
-    console.error(error.code + " " + error.message);
+    console.error(error.code + " womp womp " + error.message);
     return encodedRedirect("error", "/sign-up", error.message);
   } else {
     return encodedRedirect(
       "success",
       "/sign-up",
-      "Thanks for signing up! Please check your email for a verification link.",
+      "Thanks for signing up with watch&learn",
     );
   }
 };
