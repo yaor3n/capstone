@@ -4,7 +4,6 @@ import { SubmitButton } from "@/components/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { SmtpMessage } from "../smtp-message";
 import { Checkbox } from "@/components/ui/checkbox";
 
 export default async function Signup(props: {
@@ -30,6 +29,8 @@ export default async function Signup(props: {
           </Link>
         </p>
         <div className="flex flex-col gap-2 [&>input]:mb-3 mt-8">
+          <Label htmlFor="username">Username</Label>
+          <Input name="username" placeholder="johnny123" required />
           <Label htmlFor="email">Email</Label>
           <Input name="email" placeholder="you@example.com" required />
           <Label htmlFor="password">Password</Label>
@@ -41,7 +42,7 @@ export default async function Signup(props: {
             required
           />
           <div className="flex items-center space-x-2">
-            <Checkbox id="isLecturer" />
+            <Checkbox name="isLecturer" id="isLecturer" />
             <label
               htmlFor="isLecturer"
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
@@ -52,6 +53,7 @@ export default async function Signup(props: {
           <SubmitButton formAction={signUpAction} pendingText="Signing up...">
             Sign up
           </SubmitButton>
+          <div className="h-4"></div>
           <FormMessage message={searchParams} />
         </div>
       </form>

@@ -6,10 +6,15 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 export const signUpAction = async (formData: FormData) => {
+  const username = formData.get("username")?.toString();
   const email = formData.get("email")?.toString();
   const password = formData.get("password")?.toString();
-  const isLecturer = formData.get("isLecturer")?.toString();
-  console.log({ isLecturer });
+  const isLecturer: boolean = formData.get("isLecturer")?.toString() === "on";
+  console.log(
+    "[SIGNUP] isLecturer raw value:",
+    isLecturer,
+    isLecturer ? "lecturer" : "student",
+  );
   const supabase = await createClient();
   const origin = (await headers()).get("origin");
 
@@ -27,9 +32,9 @@ export const signUpAction = async (formData: FormData) => {
     options: {
       emailRedirectTo: `${origin}/auth/callback`,
       data: {
-        username: "lol",
+        username,
         email,
-        role: "student maybe",
+        role: isLecturer ? "lecturer" : "student",
       },
     },
   });
