@@ -4,6 +4,7 @@ import { encodedRedirect } from "@/utils/utils";
 import { createClient } from "@/utils/supabase/server";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { fetchUser } from "@/utils/fetchUser";
 
 export const signUpAction = async (formData: FormData) => {
   const username = formData.get("username")?.toString();
@@ -18,12 +19,29 @@ export const signUpAction = async (formData: FormData) => {
   const supabase = await createClient();
   const origin = (await headers()).get("origin");
 
-  if (!email || !password) {
+  if (!username || !email || !password) {
     return encodedRedirect(
       "error",
       "/sign-up",
-      "Email and password are required",
+      "Username, email and password are required",
     );
+  }
+
+  const { data: existingUser, error: err } = await supabase
+    .from("users")
+    .select("user_id")
+    .eq("username", username)
+    .maybeSingle(); // ✅ safer than .single() if you're unsure
+
+  if (err) {
+    console.error();
+    return encodedRedirect(
+      "error",
+      "/sign-up",
+      "❌ Supabase error checking username:" + err.message,
+    );
+  } else if (existingUser) {
+    return encodedRedirect("error", "/sign-up", "Username is already taken");
   }
 
   const { error } = await supabase.auth.signUp({
@@ -45,8 +63,8 @@ export const signUpAction = async (formData: FormData) => {
   } else {
     return encodedRedirect(
       "success",
-      "/sign-up",
-      "Thanks for signing up with watch&learn",
+      "/sign-in",
+      `Thanks for signing up ${username}, you may login now`,
     );
   }
 };
@@ -65,7 +83,7 @@ export const signInAction = async (formData: FormData) => {
     return encodedRedirect("error", "/sign-in", error.message);
   }
 
-  return redirect("/protected");
+  return redirect("/dashboard");
 };
 
 export const forgotPasswordAction = async (formData: FormData) => {

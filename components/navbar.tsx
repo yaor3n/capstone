@@ -1,14 +1,17 @@
-// components/navbar.tsx
+"use client";
 import Link from "next/link";
+import AuthButton from "./header-auth";
+import useUserStore from "@/stores/useUserStore";
 
 export default function Navbar({ role }: { role: string }) {
+  const user = useUserStore((state) => state.user);
+  console.log("som userrr", user);
   return (
-    <nav className="flex justify-between p-4 border-b">
-      <Link href="/">🏠 watch&learn</Link>
+    <nav className="flex w-full border-b p-4 text-sm font-semibold">
+      <Link href="/">watch&learn</Link>
       <div className="space-x-4">
         {role === "student" && (
           <>
-            <Link href="/dashboard">Dashboard</Link>
             <Link href="/appointments">Appointments</Link>
           </>
         )}
@@ -24,7 +27,7 @@ export default function Navbar({ role }: { role: string }) {
             <Link href="/users">Users</Link>
           </>
         )}
-        <Link href="/logout">Logout</Link>
+        <AuthButton />
       </div>
     </nav>
   );
