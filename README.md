@@ -11,5 +11,5 @@ git clone https://github.com/theducksinapu/capstone && cd capstone
 7. Open the sql editor on supabase
 8. Run both of the sql file content from this sql folder in this repository inside the sql runner
 9. Turn off email confirmation inside supabase settings -> Authentication > Sign In / Up > Auth Providers > Email > Turn off Confirm Email & Turn off secure email change
-10. Create an account on https://localhost:3000/sign-up
+10. Create an account on http://localhost:3000/sign-up
 11. Verify the user has been created in supabase dashboard -> Table Editor > users
