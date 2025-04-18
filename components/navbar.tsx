@@ -7,11 +7,17 @@ export default function Navbar({ role }: { role: string }) {
   const user = useUserStore((state) => state.user);
   console.log("som userrr", user);
   return (
-    <nav className="flex w-full border-b p-4 text-sm font-semibold">
-      <Link href="/">watch&learn</Link>
-      <div className="space-x-4">
+    <nav className="flex justify-around items-center w-full border-b p-4 text-sm font-semibold">
+      <Link href="/" className="text-center">
+        watch&learn
+      </Link>
+      <div>
         {role === "student" && (
           <>
+            <Link href="/appointments">Appointments</Link>
+            <Link href="/appointments">Appointments</Link>
+            <Link href="/appointments">Appointments</Link>
+            <Link href="/appointments">Appointments</Link>
             <Link href="/appointments">Appointments</Link>
           </>
         )}
@@ -27,8 +33,8 @@ export default function Navbar({ role }: { role: string }) {
             <Link href="/users">Users</Link>
           </>
         )}
-        <AuthButton />
       </div>
+      <AuthButton />
     </nav>
   );
 }
