@@ -44,6 +44,12 @@ export const signUpAction = async (formData: FormData) => {
     return encodedRedirect("error", "/sign-up", "Username is already taken");
   }
 
+  const { data } = supabase.storage
+    .from("profile-pictures")
+    .getPublicUrl("default.jpg");
+
+  const publicUrl = data.publicUrl;
+
   const { error } = await supabase.auth.signUp({
     email,
     password,
@@ -53,6 +59,7 @@ export const signUpAction = async (formData: FormData) => {
         username,
         email,
         role: isLecturer ? "lecturer" : "student",
+        pfp_url: publicUrl,
       },
     },
   });

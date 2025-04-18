@@ -43,7 +43,7 @@ export default async function RootLayout({
           <ClientOnly>
             <InitUserStore />
             <main className="min-h-screen flex flex-col items-center">
-              <Navbar role="student" />
+              <Navbar />
               <div className="flex-1 w-full max-w-4xl p-6">{children}</div>
             </main>
           </ClientOnly>
