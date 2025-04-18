@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation"; // Correct import for programmatic navigation
-import AuthButton from "./header-auth";
+import AuthButton from "./user-profile";
 import useUserStore from "@/stores/useUserStore";
 import { X, Menu } from "lucide-react";
 import Link from "next/link";

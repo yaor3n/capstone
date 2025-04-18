@@ -17,7 +17,7 @@ export const fetchUser = async () => {
       .select("username, email, role, pfp_url")
       .eq("user_id", user.id)
       .single();
-    //todo: remove comments
+
     console.log("FETCHING USER....");
     console.log(userInfo);
 

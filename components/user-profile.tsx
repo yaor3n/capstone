@@ -32,23 +32,20 @@ export default function AuthButton({
 
   if (user) {
     return (
-      <div className="flex gap-4 items-center">
+      <div className="flex items-center gap-4">
         <div
           onClick={handleProfileClick}
-          className="flex gap-2 p-2 cursor-pointer items-center rounded-lg hover:bg-gray-100 hover:text-black transition-all duration-200"
+          className="flex cursor-pointer items-center gap-4 rounded-lg p-2 transition-all duration-200 hover:bg-gray-100 hover:text-black"
         >
+          <div className="align-center flex flex-col items-end">
+            <span>{user.username}</span>
+            <span className="text-xs text-gray-500">{user.role}</span>
+          </div>
           <Avatar>
             <AvatarImage src={user.pfp_url} alt={`@${user.username}`} />
             <AvatarFallback>CN</AvatarFallback>
           </Avatar>
-          <div className="flex items-center gap-4">{user.username}</div>
         </div>
-        <button
-          onClick={handleSignOut}
-          className="flex items-center gap-2 text-red-500 hover:text-red-300"
-        >
-          <LogOut size={20} />
-        </button>
       </div>
     );
   } else {

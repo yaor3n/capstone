@@ -4,7 +4,7 @@ import { ThemeProvider } from "next-themes";
 import Link from "next/link";
 import "./globals.css";
 import ClientOnly from "@/components/client-only";
-import AuthButton from "@/components/header-auth";
+import AuthButton from "@/components/user-profile";
 import Navbar from "@/components/navbar";
 import { createClient } from "@/utils/supabase/server";
 import useUserStore, { UserInfo } from "@/stores/useUserStore";
@@ -42,9 +42,9 @@ export default async function RootLayout({
         >
           <ClientOnly>
             <InitUserStore />
-            <main className="min-h-screen flex flex-col items-center">
+            <main className="flex min-h-screen flex-col items-center">
               <Navbar />
-              <div className="flex-1 w-full max-w-4xl p-6">{children}</div>
+              <div className="w-full max-w-4xl flex-1 p-6">{children}</div>
             </main>
           </ClientOnly>
         </ThemeProvider>
