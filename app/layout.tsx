@@ -44,7 +44,9 @@ export default async function RootLayout({
             <InitUserStore />
             <main className="flex h-screen min-h-screen w-screen flex-col items-center">
               <Navbar />
-              <div className="flex h-full w-full flex-col">{children}</div>
+              <div className="flex h-full w-full flex-col bg-[#f6f8d5]">
+                {children}
+              </div>
             </main>
           </ClientOnly>
         </ThemeProvider>

@@ -12,25 +12,25 @@ const QuizTypePage = () => {
       </h1>
       <div className="m-4 grid grid-cols-1 gap-4 rounded-2xl border-[3px] border-[#205781] bg-[#98D2C0] p-6 sm:grid-cols-2 sm:p-8 md:grid-cols-3 md:p-10">
         <Button
-          onClick={() => router.push("/teacher/quiztype/slideshow")}
+          onClick={() => router.push("/create/slideshow")}
           className="w-full border-[3px] border-[#205781] bg-[#F6F8D5] p-10 text-lg font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#205781] hover:text-[#F6F8D5] sm:text-lg md:text-xl lg:text-2xl"
         >
           Create Slide Show Question
         </Button>
         <Button
-          onClick={() => router.push("/teacher/quiztype/vidqn")}
+          onClick={() => router.push("/create/vidqn")}
           className="w-full border-[3px] border-[#205781] bg-[#F6F8D5] p-10 text-lg font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#205781] hover:text-[#F6F8D5] sm:text-lg md:text-xl lg:text-2xl"
         >
           Create Video Question
         </Button>
         <Button
-          onClick={() => router.push("/teacher/quiztype/whichimg")}
+          onClick={() => router.push("/create/whichofimg")}
           className="w-full border-[3px] border-[#205781] bg-[#F6F8D5] p-10 text-lg font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#205781] hover:text-[#F6F8D5] sm:text-lg md:text-xl lg:text-2xl"
         >
           Create Match Image Question
         </Button>
         <Button
-          onClick={() => router.push("/teacher/quiztype/pic2pic")}
+          onClick={() => router.push("/create/pic2pic")}
           className="w-full border-[3px] border-[#205781] bg-[#F6F8D5] p-10 text-lg font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#205781] hover:text-[#F6F8D5] sm:text-lg md:text-xl lg:text-2xl"
         >
           Create Picture to picture Question
