@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -13,8 +12,15 @@ const SlideShowPage = () => {
   const router = useRouter();
   const supabase = createClient();
 
+  // sum notes:
+  // imageSrc: stores temporary local preview of dropped image using URL.createObjectURL
+  // imageURL: actually stores the image's public URL
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [imageURL, setImageURL] = useState<string | null>(null);
+
+  const [coverSrc, setCoverSrc] = useState<string | null>(null);
+  const [coverURL, setCoverURL] = useState<string | null>(null);
+
   const [options, setOptions] = useState([
     { text: "", isCorrect: false },
     { text: "", isCorrect: false },
@@ -22,6 +28,8 @@ const SlideShowPage = () => {
     { text: "", isCorrect: false },
   ]);
 
+  // uploads the files to supabase under quiz-images bucket
+  // then retreives public URL
   const uploadImage = async (file: File): Promise<string> => {
     const fileName = `${Date.now()}-${file.name}`;
     const { error } = await supabase.storage
@@ -55,6 +63,23 @@ const SlideShowPage = () => {
     }
   };
 
+  const handleCoverDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+
+    if (file && file.type.startsWith("image/")) {
+      setCoverSrc(URL.createObjectURL(file));
+      uploadImage(file)
+        .then((url) => {
+          console.log("Image uploaded:", url);
+          setCoverURL(url);
+        })
+        .catch((err) => console.error("Upload failed", err));
+    }
+  };
+
+  // by default,
+  // elements block drop events so need to call preventDefault() to allow dropzone to accept files
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
   };
@@ -67,6 +92,19 @@ const SlideShowPage = () => {
         .then((url) => {
           console.log("Image uploaded:", url);
           setImageURL(url);
+        })
+        .catch((err) => console.error("Upload failed", err));
+    }
+  };
+
+  const handleFileCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      setCoverSrc(URL.createObjectURL(file));
+      uploadImage(file)
+        .then((url) => {
+          console.log("Image uploaded:", url);
+          setCoverURL(url);
         })
         .catch((err) => console.error("Upload failed", err));
     }
@@ -143,6 +181,8 @@ const SlideShowPage = () => {
   const handleClear = () => {
     setImageSrc(null);
     setImageURL(null);
+    setCoverSrc(null);
+    setCoverURL(null);
     setOptions([
       { text: "", isCorrect: false },
       { text: "", isCorrect: false },
@@ -152,8 +192,52 @@ const SlideShowPage = () => {
   };
 
   return (
-    // <div className="h-full bg-[#f6f8d5]">
-    <div className="flex flex-1 bg-red-400">
+    <div className="h-full bg-[#f6f8d5]">
+      <h1 className="pb-5 pt-7 text-center text-3xl font-bold text-[#205781]">
+        Quiz Type: Slideshow Quiz
+      </h1>
+
+      <h1 className="pb-5 pt-7 text-center text-xl font-bold text-[#205781]">
+        Drop your quiz cover below!
+      </h1>
+
+      <div
+        onDrop={handleCoverDrop}
+        onDragOver={handleDragOver}
+        className="mx-auto flex h-64 w-[80%] items-center justify-center rounded-xl border-4 border-dashed border-[#205781] text-center text-[#205781] transition duration-200 ease-linear hover:bg-[#98D2C0]"
+      >
+        {coverSrc ? (
+          <img src={coverSrc} alt="Dropped" className="max-h-full max-w-full" />
+        ) : (
+          <p className="text-lg font-medium">
+            &#x2295; Drag & drop an image here!
+          </p>
+        )}
+      </div>
+
+      <div className="flex justify-center gap-4 py-6">
+        <Button
+          className="w-auto border-[3px] border-[#205781] bg-[#f6f8d5] text-xl font-bold text-[#205781] transition-all duration-300 ease-linear hover:bg-[#205781] hover:text-[#f6f8d5]"
+          onClick={() => document.getElementById("fileCoverInput")?.click()}
+        >
+          &#128193; Browse Files
+        </Button>
+        <input
+          id="fileCoverInput"
+          type="file"
+          accept="image/*"
+          onChange={handleFileCoverSelect}
+          className="hidden"
+        />
+      </div>
+
+      <div className="flex items-center justify-center">
+        <Input
+          className="h-15 w-[400px] border-[3px] border-[#205781] bg-[#f6f8d5] font-bold text-[#205781] transition-all duration-200 ease-linear hover:border-[#98d2c0]"
+          placeholder="Enter quiz name"
+        />
+      </div>
+
       <h1 className="pb-5 pt-7 text-center text-3xl font-bold text-[#205781]">
         Create Slideshow Quiz
       </h1>
@@ -207,9 +291,11 @@ const SlideShowPage = () => {
         ))}
       </div>
 
-      <div className="flex justify-center pb-10">
-        <Checkbox className="fg-[#f6f8d5] h-full border-[3px] border-[#205781] p-3 data-[state=checked]:border-[#205781] data-[state=checked]:bg-[#205781]" />
-        <Label className="text-xl font-bold text-[#205781]">Make Public</Label>
+      <div className="flex items-center justify-center pb-10">
+        <Checkbox className="fg-[#f6f8d5] border-[2px] border-[#205781] data-[state=checked]:border-[#205781] data-[state=checked]:bg-[#205781]" />
+        <Label className="pl-3 text-xl font-bold text-[#205781]">
+          Make Public
+        </Label>
       </div>
 
       <div className="flex justify-center gap-6 pb-48">
