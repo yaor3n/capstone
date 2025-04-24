@@ -339,7 +339,7 @@ const SlideShowPage = () => {
         />
       </div>
 
-      <div className="flex items-center justify-center pt-5">
+      <div className="flex items-center justify-center bg-[#f6f8d5] pt-5">
         <Input
           value={quizQuestion}
           onChange={(e) => setQuizQuestion(e.target.value)}
@@ -348,7 +348,7 @@ const SlideShowPage = () => {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 pb-10 pl-10 pr-10 pt-5">
+      <div className="grid grid-cols-1 gap-4 bg-[#f6f8d5] pb-10 pl-10 pr-10 pt-5">
         {options.map((option, index) => (
           <div key={index} className="flex items-center gap-4">
             <Input
@@ -367,7 +367,7 @@ const SlideShowPage = () => {
         ))}
       </div>
 
-      <div className="flex items-center justify-center pb-10">
+      <div className="flex items-center justify-center bg-[#f6f8d5] pb-10">
         <Checkbox
           checked={publicVisibility}
           onCheckedChange={(checked) => setPublicVisibility(!!checked)}
@@ -378,7 +378,7 @@ const SlideShowPage = () => {
         </Label>
       </div>
 
-      <div className="flex justify-center gap-6 pb-48">
+      <div className="flex justify-center gap-6 bg-[#f6f8d5] pb-48">
         <Button
           type="button"
           onClick={handleLeaveClick}
