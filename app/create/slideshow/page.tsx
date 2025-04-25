@@ -57,6 +57,7 @@ const SlideShowPage = () => {
 
     return publicUrlData.publicUrl;
   };
+
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
@@ -228,12 +229,7 @@ const SlideShowPage = () => {
 
       if (optionsError) throw optionsError;
 
-      alert("Question added! Continue or click Done to finish.");
       handleClear(); // Clear question-specific fields only
-
-      if (isFinalSubmit) {
-        router.push("/your-success-route");
-      }
     } catch (error) {
       console.error("Error:", error);
     }
@@ -251,11 +247,11 @@ const SlideShowPage = () => {
 
   return (
     <div className="h-full bg-[#f6f8d5]">
-      <h1 className="pt-7 text-center text-3xl font-bold text-[#205781]">
+      <h1 className="pb-5 pt-7 text-center text-3xl font-bold text-[#205781]">
         Quiz Type: Slideshow Quiz
       </h1>
 
-      <h1 className="pb-5 pt-7 text-center text-xl font-bold text-[#205781]">
+      <h1 className="pb-5 text-center text-xl font-bold text-[#205781]">
         Drop your quiz cover below!
       </h1>
 
@@ -307,6 +303,9 @@ const SlideShowPage = () => {
 
       <h1 className="pb-5 pt-7 text-center text-3xl font-bold text-[#205781]">
         Create Slideshow Quiz
+      </h1>
+      <h1 className="pb-5 text-center text-xl font-bold text-[#205781]">
+        Drop your question image below!
       </h1>
 
       <div
@@ -391,7 +390,7 @@ const SlideShowPage = () => {
           onClick={() => {
             handleDone({ imageURL, coverURL, isFinalSubmit: false });
             alert(
-              `Question added to "${quizName}"! Continue adding or click Done to finish.`,
+              `Question added to "${quizName}"! Continue adding or click Leave to finish.`,
             );
           }}
           className="w-35 h-15 border-[3px] border-[#205781] bg-[#f6f8d5] text-xl font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#98D2C0]"
