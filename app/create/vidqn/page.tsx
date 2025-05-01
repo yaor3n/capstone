@@ -86,15 +86,27 @@ const VidQn = () => {
     e.preventDefault();
   }
 
+  const MAX_FILE_SIZE_MB = 50;
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const fileSizeMB = file.size / (1024 * 1024);
+    if (fileSizeMB > MAX_FILE_SIZE_MB) {
+      alert(
+        `File is too large! Please select a file smaller than ${MAX_FILE_SIZE_MB}MB.`,
+      );
+      return;
+    }
+
     setVideoSrc(URL.createObjectURL(file));
+
     try {
-      await uploadImage(file, false);
+      const uploadedUrl = await uploadImage(file, false);
+      setVideoURL(uploadedUrl);
     } catch (err) {
-      console.error("Question image upload failed", err);
+      console.error("Video upload failed", err);
     }
   };
 
@@ -137,34 +149,22 @@ const VidQn = () => {
     setQuizQuestion(""); // Clear just the question text
   };
 
-  // visibility
   const [publicVisibility, setPublicVisibility] = useState(false);
 
-  // input fields
   const [quizName, setQuizName] = useState("");
   const [quizDescription, setQuizDescription] = useState("");
   const [quizQuestion, setQuizQuestion] = useState("");
 
-  // done button
   const [currentQuizId, setCurrentQuizId] = useState<string | null>(null);
-  const handleDone = async ({
-    videoURL = null,
-    coverURL = null,
-    isFinalSubmit = false,
-  }: {
-    videoURL?: string | null;
-    coverURL?: string | null;
-    isFinalSubmit?: boolean;
-  }) => {
-    const { data: authData, error: authError } = await supabase.auth.getUser();
 
+  const handleDone = async () => {
+    const { data: authData, error: authError } = await supabase.auth.getUser();
     if (authError || !authData?.user) {
       console.error("Auth error:", authError);
       return;
     }
 
     try {
-      // Only create new quiz if we don't have an ID yet
       let quizId = currentQuizId;
       if (!quizId) {
         const { data: quiz, error: quizError } = await supabase
@@ -187,7 +187,6 @@ const VidQn = () => {
         quizId = quiz.quiz_id;
       }
 
-      // Insert question to the same quiz
       const { data: question, error: questionsError } = await supabase
         .from("questions")
         .insert([
@@ -196,7 +195,7 @@ const VidQn = () => {
             question_type: "videoqn",
             question_text: quizQuestion,
             image_urls: null,
-            video_url: videoURL,
+            video_url: videoURL, // use from state!
             is_active: true,
           },
         ])
@@ -205,7 +204,6 @@ const VidQn = () => {
 
       if (questionsError) throw questionsError;
 
-      // Insert options
       const optionInserts = options.map((option) => ({
         question_id: question.question_id,
         option_text: option.text,
@@ -219,7 +217,7 @@ const VidQn = () => {
 
       if (optionsError) throw optionsError;
 
-      handleClear(); // Clear question-specific fields only
+      handleClear();
     } catch (error) {
       console.error("Error:", error);
     }
@@ -305,11 +303,7 @@ const VidQn = () => {
         className="mx-auto flex h-64 w-[80%] items-center justify-center rounded-xl border-4 border-dashed border-[#205781] text-center text-[#205781] transition duration-200 ease-linear hover:bg-[#98D2C0]"
       >
         {videoSrc ? (
-          <video
-            src={videoSrc}
-            alt="Dropped"
-            className="max-h-full max-w-full"
-          />
+          <video src={videoSrc} className="max-h-full max-w-full" />
         ) : (
           <p className="text-lg font-medium">
             &#x2295; Drag & drop video here!
@@ -381,9 +375,8 @@ const VidQn = () => {
           &#x2190; Leave
         </Button>
         <Button
-          type="button"
           onClick={() => {
-            handleDone({ videoURL, coverURL, isFinalSubmit: false });
+            handleDone();
             alert(
               `Question added to "${quizName}"! Continue adding or click Leave to finish.`,
             );

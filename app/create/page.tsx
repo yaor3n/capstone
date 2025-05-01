@@ -36,13 +36,13 @@ const QuizTypePage = () => {
           Create Picture to picture Question
         </Button>
         <Button
-          onClick={() => router.push("/teacher/quiztype/dragndrop")}
+          onClick={() => router.push("/create/dragndrop")}
           className="w-full border-[3px] border-[#205781] bg-[#F6F8D5] p-10 text-lg font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#205781] hover:text-[#F6F8D5] sm:text-lg md:text-xl lg:text-2xl"
         >
           Create Drag & Drop Question
         </Button>
         <Button
-          onClick={() => router.push("/teacher/quiztype/imghotspot")}
+          onClick={() => router.push("/create/imghotspot")}
           className="w-full border-[3px] border-[#205781] bg-[#F6F8D5] p-10 text-lg font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#205781] hover:text-[#F6F8D5] sm:text-lg md:text-xl lg:text-2xl"
         >
           Create Image Hotspot Question
