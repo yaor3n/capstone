@@ -7,17 +7,25 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/client";
+import { useSearchParams } from "next/navigation";
 
 const VidQn = () => {
   const supabase = createClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
+  // State for video and question
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
   const [videoURL, setVideoURL] = useState<string | null>(null);
+  const [quizQuestion, setQuizQuestion] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
 
-  const [coverSrc, setCoverSrc] = useState<string | null>(null);
-  const [coverURL, setCoverURL] = useState<string | null>(null);
+  // Get quizId from URL
+  const quizId = searchParams.get("quizId");
+  const currentNum = parseInt(searchParams.get("questionNum") || "1", 10);
+  const nextNum = currentNum + 1;
 
+  // Options state
   const [options, setOptions] = useState([
     { text: "", isCorrect: false },
     { text: "", isCorrect: false },
@@ -25,105 +33,73 @@ const VidQn = () => {
     { text: "", isCorrect: false },
   ]);
 
-  const uploadImage = async (
-    file: File,
-    isCover: boolean = false,
-  ): Promise<string> => {
+  // Video upload function
+  const uploadVideo = async (file: File): Promise<string> => {
     const fileName = `${Date.now()}-${file.name}`;
     const { error } = await supabase.storage
       .from("quiz-images")
       .upload(fileName, file);
 
     if (error) {
-      console.error("Image upload failed:", error.message);
-      throw new Error("Image upload failed");
+      console.error("Video upload failed:", error.message);
+      throw new Error("Video upload failed");
     }
 
     const { data: publicUrlData } = supabase.storage
       .from("quiz-images")
       .getPublicUrl(fileName);
 
-    // Update the appropriate state based on whether it's a cover or question image
-    if (isCover) {
-      setCoverURL(publicUrlData.publicUrl);
-    } else {
-      setVideoURL(publicUrlData.publicUrl);
-    }
-
     return publicUrlData.publicUrl;
   };
 
+  // Handle video upload with validation
+  const handleVideoUpload = async (file: File) => {
+    try {
+      setIsUploading(true);
+
+      // Validate file type
+      const validVideoTypes = ["video/mp4", "video/webm", "video/ogg"];
+      if (!validVideoTypes.includes(file.type)) {
+        alert("Please upload a valid video file (MP4, WebM, or Ogg)");
+        return;
+      }
+
+      // Validate file size (50MB max)
+      const maxSizeMB = 50;
+      if (file.size > maxSizeMB * 1024 * 1024) {
+        alert(`Video must be smaller than ${maxSizeMB}MB`);
+        return;
+      }
+
+      const url = await uploadVideo(file);
+      setVideoSrc(URL.createObjectURL(file));
+      setVideoURL(url);
+    } catch (err) {
+      console.error("Video upload failed:", err);
+      alert("Failed to upload video. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // File input handler
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) await handleVideoUpload(file);
+  };
+
+  // Drag and drop handlers
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
-
-    if (file && file.type.startsWith("image/")) {
-      setVideoSrc(URL.createObjectURL(file));
-      uploadImage(file)
-        .then((url) => {
-          console.log("Image uploaded:", url);
-          setVideoURL(url);
-        })
-        .catch((err) => console.error("Upload failed", err));
-    }
+    if (file) handleVideoUpload(file);
   };
-  const handleCoverDrop = (e: React.DragEvent<HTMLDivElement>) => {
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    const file = e.dataTransfer.files[0];
-
-    if (file && file.type.startsWith("image/")) {
-      setCoverSrc(URL.createObjectURL(file));
-      uploadImage(file)
-        .then((url) => {
-          console.log("Image uploaded:", url);
-          setCoverURL(url);
-        })
-        .catch((err) => console.error("Upload failed", err));
-    }
   };
 
-  function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
-    e.preventDefault();
-  }
-
-  const MAX_FILE_SIZE_MB = 50;
-
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const fileSizeMB = file.size / (1024 * 1024);
-    if (fileSizeMB > MAX_FILE_SIZE_MB) {
-      alert(
-        `File is too large! Please select a file smaller than ${MAX_FILE_SIZE_MB}MB.`,
-      );
-      return;
-    }
-
-    setVideoSrc(URL.createObjectURL(file));
-
-    try {
-      const uploadedUrl = await uploadImage(file, false);
-      setVideoURL(uploadedUrl);
-    } catch (err) {
-      console.error("Video upload failed", err);
-    }
-  };
-
-  const handleFileCoverSelect = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setCoverSrc(URL.createObjectURL(file));
-    try {
-      await uploadImage(file, true);
-    } catch (err) {
-      console.error("Cover upload failed", err);
-    }
-  };
-
+  // Option handlers
   const handleOptionChange = (index: number, text: string) => {
     const updatedOptions = [...options];
     updatedOptions[index].text = text;
@@ -136,57 +112,48 @@ const VidQn = () => {
     setOptions(updatedOptions);
   };
 
+  // Clear form
   const handleClear = () => {
     setVideoSrc(null);
     setVideoURL(null);
-    // Don't clear cover image or quiz info
+    setQuizQuestion("");
     setOptions([
       { text: "", isCorrect: false },
       { text: "", isCorrect: false },
       { text: "", isCorrect: false },
       { text: "", isCorrect: false },
     ]);
-    setQuizQuestion(""); // Clear just the question text
   };
 
-  const [publicVisibility, setPublicVisibility] = useState(false);
-
-  const [quizName, setQuizName] = useState("");
-  const [quizDescription, setQuizDescription] = useState("");
-  const [quizQuestion, setQuizQuestion] = useState("");
-
-  const [currentQuizId, setCurrentQuizId] = useState<string | null>(null);
-
+  // Save question
   const handleDone = async () => {
-    const { data: authData, error: authError } = await supabase.auth.getUser();
-    if (authError || !authData?.user) {
-      console.error("Auth error:", authError);
+    if (!videoURL) {
+      alert("Please upload a video first");
+      return;
+    }
+
+    if (!quizQuestion.trim()) {
+      alert("Please enter a question");
+      return;
+    }
+
+    if (options.some((opt) => !opt.text.trim())) {
+      alert("Please fill in all options");
+      return;
+    }
+
+    if (!options.some((opt) => opt.isCorrect)) {
+      alert("Please select a correct answer");
+      return;
+    }
+
+    if (!quizId) {
+      alert("Missing quiz ID");
       return;
     }
 
     try {
-      let quizId = currentQuizId;
-      if (!quizId) {
-        const { data: quiz, error: quizError } = await supabase
-          .from("quizzes")
-          .insert([
-            {
-              user_id: authData.user.id,
-              name: quizName,
-              description: quizDescription,
-              public_visibility: publicVisibility,
-              join_code: Math.random().toString(36).substring(2, 8),
-              quiz_cover_url: coverURL,
-            },
-          ])
-          .select()
-          .single();
-
-        if (quizError) throw quizError;
-        setCurrentQuizId(quiz.quiz_id);
-        quizId = quiz.quiz_id;
-      }
-
+      // Insert question
       const { data: question, error: questionsError } = await supabase
         .from("questions")
         .insert([
@@ -194,8 +161,7 @@ const VidQn = () => {
             quiz_id: quizId,
             question_type: "videoqn",
             question_text: quizQuestion,
-            image_urls: null,
-            video_url: videoURL, // use from state!
+            video_url: videoURL,
             is_active: true,
           },
         ])
@@ -204,6 +170,7 @@ const VidQn = () => {
 
       if (questionsError) throw questionsError;
 
+      // Insert options
       const optionInserts = options.map((option) => ({
         question_id: question.question_id,
         option_text: option.text,
@@ -217,85 +184,32 @@ const VidQn = () => {
 
       if (optionsError) throw optionsError;
 
-      handleClear();
+      // Redirect back to quiz builder
+      router.push(
+        `/create/quizbuilder?quizId=${quizId}` +
+          `&questionId=${question.question_id}` +
+          `&questionText=${encodeURIComponent(quizQuestion)}` +
+          `&questionType=videoqn` +
+          `&questionNum=${nextNum}`,
+      );
+
+      alert("Question added successfully!");
     } catch (error) {
-      console.error("Error:", error);
-    }
-  };
-
-  const handleLeaveClick = () => {
-    const confirmLeave = confirm(
-      "You're about to leave this page!! Changes will not be saved :(\n\nClick OK to leave or Cancel to stay.",
-    );
-
-    if (confirmLeave) {
-      router.push("/create");
+      console.error("Error saving question:", error);
+      alert("Failed to save question. Please try again.");
     }
   };
 
   return (
     <div className="bg-[#f6f8d5]">
       <h1 className="pb-5 pt-7 text-center text-3xl font-bold text-[#205781]">
-        Quiz Type: Video Quiz
+        Create Video Question
       </h1>
 
-      <h1 className="pb-5 text-center text-xl font-bold text-[#205781]">
-        Drop your quiz cover below!
-      </h1>
-
-      <div
-        onDrop={handleCoverDrop}
-        onDragOver={handleDragOver}
-        className="mx-auto flex h-64 w-[80%] items-center justify-center rounded-xl border-4 border-dashed border-[#205781] text-center text-[#205781] transition duration-200 ease-linear hover:bg-[#98D2C0]"
-      >
-        {coverSrc ? (
-          <img src={coverSrc} alt="Dropped" className="max-h-full max-w-full" />
-        ) : (
-          <p className="text-lg font-medium">
-            &#x2295; Drag & drop an image here!
-          </p>
-        )}
+      {/* Video Upload Area */}
+      <div className="pb-5 text-center text-xl font-bold text-[#205781]">
+        Drop your question video below! (less than 50mb)
       </div>
-
-      <div className="flex justify-center gap-4 py-6">
-        <Button
-          className="w-auto border-[3px] border-[#205781] bg-[#f6f8d5] text-xl font-bold text-[#205781] transition-all duration-300 ease-linear hover:bg-[#205781] hover:text-[#f6f8d5]"
-          onClick={() => document.getElementById("fileCoverInput")?.click()}
-        >
-          &#128193; Browse Files
-        </Button>
-        <input
-          id="fileCoverInput"
-          type="file"
-          accept="image/*"
-          onChange={handleFileCoverSelect}
-          className="hidden"
-        />
-      </div>
-
-      <div className="flex items-center justify-center gap-6">
-        <Input
-          value={quizName}
-          onChange={(e) => setQuizName(e.target.value)}
-          className="h-15 w-[150px] border-[3px] border-[#205781] bg-[#f6f8d5] font-bold text-[#205781] transition-all duration-200 ease-linear hover:border-[#98d2c0] md:w-[400px]"
-          placeholder="Enter quiz name"
-        />
-
-        <Input
-          value={quizDescription}
-          onChange={(e) => setQuizDescription(e.target.value)}
-          className="h-15 w-[150px] border-[3px] border-[#205781] bg-[#f6f8d5] font-bold text-[#205781] transition-all duration-200 ease-linear hover:border-[#98d2c0] md:w-[400px]"
-          placeholder="Enter quiz description"
-        />
-      </div>
-
-      <h1 className="pb-5 pt-7 text-center text-3xl font-bold text-[#205781]">
-        Create Video Quiz
-      </h1>
-
-      <h1 className="pb-5 text-center text-xl font-bold text-[#205781]">
-        Drop your question video below!
-      </h1>
 
       <div
         onDrop={handleDrop}
@@ -303,7 +217,9 @@ const VidQn = () => {
         className="mx-auto flex h-64 w-[80%] items-center justify-center rounded-xl border-4 border-dashed border-[#205781] text-center text-[#205781] transition duration-200 ease-linear hover:bg-[#98D2C0]"
       >
         {videoSrc ? (
-          <video src={videoSrc} className="max-h-full max-w-full" />
+          <video src={videoSrc} className="max-h-full max-w-full" controls />
+        ) : isUploading ? (
+          <p className="text-lg font-medium">Uploading...</p>
         ) : (
           <p className="text-lg font-medium">
             &#x2295; Drag & drop video here!
@@ -311,10 +227,12 @@ const VidQn = () => {
         )}
       </div>
 
+      {/* Browse Button */}
       <div className="flex justify-center gap-4 py-6">
         <Button
           className="w-auto border-[3px] border-[#205781] bg-[#f6f8d5] text-xl font-bold text-[#205781] transition-all duration-300 ease-linear hover:bg-[#205781] hover:text-[#f6f8d5]"
           onClick={() => document.getElementById("fileInput")?.click()}
+          disabled={isUploading}
         >
           &#128193; Browse Files
         </Button>
@@ -324,18 +242,21 @@ const VidQn = () => {
           accept="video/*"
           onChange={handleFileSelect}
           className="hidden"
+          disabled={isUploading}
         />
       </div>
 
+      {/* Question Input */}
       <div className="flex items-center justify-center bg-[#f6f8d5] pt-5">
         <Input
           value={quizQuestion}
           onChange={(e) => setQuizQuestion(e.target.value)}
           className="h-15 w-[150px] border-[3px] border-[#205781] bg-[#f6f8d5] font-bold text-[#205781] transition-all duration-200 ease-linear hover:border-[#98d2c0] md:w-[400px]"
-          placeholder="Enter quiz Question: (e.g. HOW DO I USE NEXTJS)"
+          placeholder="Enter quiz question"
         />
       </div>
 
+      {/* Options */}
       <div className="grid grid-cols-1 gap-4 bg-[#f6f8d5] pb-10 pl-10 pr-10 pt-5">
         {options.map((option, index) => (
           <div key={index} className="flex items-center gap-4">
@@ -355,33 +276,12 @@ const VidQn = () => {
         ))}
       </div>
 
-      <div className="flex items-center justify-center bg-[#f6f8d5] pb-10">
-        <Checkbox
-          checked={publicVisibility}
-          onCheckedChange={(checked) => setPublicVisibility(!!checked)}
-          className="fg-[#f6f8d5] border-[2px] border-[#205781] data-[state=checked]:border-[#205781] data-[state=checked]:bg-[#205781]"
-        />
-        <Label className="pl-3 text-xl font-bold text-[#205781]">
-          Make Public
-        </Label>
-      </div>
-
+      {/* Action Buttons */}
       <div className="flex justify-center gap-6 bg-[#f6f8d5] pb-48">
         <Button
-          type="button"
-          onClick={handleLeaveClick}
+          onClick={handleDone}
           className="w-35 h-15 border-[3px] border-[#205781] bg-[#f6f8d5] text-xl font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#98D2C0]"
-        >
-          &#x2190; Leave
-        </Button>
-        <Button
-          onClick={() => {
-            handleDone();
-            alert(
-              `Question added to "${quizName}"! Continue adding or click Leave to finish.`,
-            );
-          }}
-          className="w-35 h-15 border-[3px] border-[#205781] bg-[#f6f8d5] text-xl font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#98D2C0]"
+          disabled={isUploading}
         >
           &#x2295; Add
         </Button>

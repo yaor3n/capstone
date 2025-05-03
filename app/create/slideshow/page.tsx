@@ -6,19 +6,32 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/utils/supabase/client";
+import { useSearchParams } from "next/navigation";
 
 const SlideShowPage = () => {
   const router = useRouter();
   const supabase = createClient();
 
-  // Src: stores temporary local preview of dropped image w URL.createObjectURL
-  // URL: actually stores the image's public URL in supabase
-  // flow: when user drops/browses image it will show the preview (imageSRC)
-  const [imageSrc, setImageSrc] = useState<string | null>(null);
-  const [imageURL, setImageURL] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const quizId = searchParams.get("quizId");
 
-  const [coverSrc, setCoverSrc] = useState<string | null>(null);
-  const [coverURL, setCoverURL] = useState<string | null>(null);
+  const currentNum = parseInt(searchParams.get("questionNum") || "1", 10);
+  const nextNum = currentNum + 1;
+
+  // State for multiple images (up to 4)
+  const [images, setImages] = useState<
+    Array<{
+      src: string | null;
+      url: string | null;
+      file: File | null;
+    }>
+  >(
+    Array(4).fill({
+      src: null,
+      url: null,
+      file: null,
+    }),
+  );
 
   const [options, setOptions] = useState([
     { text: "", isCorrect: false },
@@ -27,13 +40,7 @@ const SlideShowPage = () => {
     { text: "", isCorrect: false },
   ]);
 
-  // uploads the files to supabase under quiz-images bucket
-  // then retreives public URL
-
-  const uploadImage = async (
-    file: File,
-    isCover: boolean = false,
-  ): Promise<string> => {
+  const uploadImage = async (file: File): Promise<string> => {
     const fileName = `${Date.now()}-${file.name}`;
     const { error } = await supabase.storage
       .from("quiz-images")
@@ -48,77 +55,43 @@ const SlideShowPage = () => {
       .from("quiz-images")
       .getPublicUrl(fileName);
 
-    // Update the appropriate state based on whether it's a cover or question image
-    if (isCover) {
-      setCoverURL(publicUrlData.publicUrl);
-    } else {
-      setImageURL(publicUrlData.publicUrl);
-    }
-
     return publicUrlData.publicUrl;
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-
-    if (file && file.type.startsWith("image/")) {
-      setImageSrc(URL.createObjectURL(file));
-      uploadImage(file)
-        .then((url) => {
-          console.log("Image uploaded:", url);
-          setImageURL(url);
-        })
-        .catch((err) => console.error("Upload failed", err));
+  const handleImageUpload = async (index: number, file: File) => {
+    try {
+      const url = await uploadImage(file);
+      const newImages = [...images];
+      newImages[index] = {
+        src: URL.createObjectURL(file),
+        url,
+        file,
+      };
+      setImages(newImages);
+    } catch (err) {
+      console.error("Upload failed", err);
     }
   };
 
-  const handleCoverDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
+  const handleDrop =
+    (index: number) => (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith("image/")) {
+        handleImageUpload(index, file);
+      }
+    };
 
-    if (file && file.type.startsWith("image/")) {
-      setCoverSrc(URL.createObjectURL(file));
-      uploadImage(file)
-        .then((url) => {
-          console.log("Image uploaded:", url);
-          setCoverURL(url);
-        })
-        .catch((err) => console.error("Upload failed", err));
-    }
-  };
-
-  // by default,
-  // elements block drop events so need to call preventDefault() to allow dropzone to accept files
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setImageSrc(URL.createObjectURL(file));
-    try {
-      await uploadImage(file, false);
-    } catch (err) {
-      console.error("Question image upload failed", err);
-    }
-  };
-
-  const handleFileCoverSelect = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setCoverSrc(URL.createObjectURL(file));
-    try {
-      await uploadImage(file, true);
-    } catch (err) {
-      console.error("Cover upload failed", err);
-    }
-  };
+  const handleFileSelect =
+    (index: number) => async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      await handleImageUpload(index, file);
+    };
 
   const handleOptionChange = (index: number, text: string) => {
     const updatedOptions = [...options];
@@ -126,86 +99,47 @@ const SlideShowPage = () => {
     setOptions(updatedOptions);
   };
 
-  const handleCheckbox = (index: number) => {
-    const updatedOptions = [...options];
-    updatedOptions.forEach((option, idx) => (option.isCorrect = idx === index));
-    setOptions(updatedOptions);
-  };
-
-  // Update handleClear to preserve quiz info
   const handleClear = () => {
-    setImageSrc(null);
-    setImageURL(null);
-    // Don't clear cover image or quiz info
+    setImages(
+      Array(4).fill({
+        src: null,
+        url: null,
+        file: null,
+      }),
+    );
     setOptions([
       { text: "", isCorrect: false },
       { text: "", isCorrect: false },
       { text: "", isCorrect: false },
       { text: "", isCorrect: false },
     ]);
-    setQuizQuestion(""); // Clear just the question text
+    setQuizQuestion("");
   };
 
-  // visibility
-  const [publicVisibility, setPublicVisibility] = useState(false);
-
-  // input fields
-  const [quizName, setQuizName] = useState("");
-  const [quizDescription, setQuizDescription] = useState("");
   const [quizQuestion, setQuizQuestion] = useState("");
 
-  // done button
-  const [currentQuizId, setCurrentQuizId] = useState<string | null>(null);
-
-  const handleDone = async ({
-    imageURL = null,
-    coverURL = null,
-    isFinalSubmit = false,
-  }: {
-    imageURL?: string | null;
-    coverURL?: string | null;
-    isFinalSubmit?: boolean;
-  }) => {
-    const { data: authData, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !authData?.user) {
-      console.error("Auth error:", authError);
-      return;
-    }
-
+  const handleDone = async () => {
     try {
-      // Only create new quiz if we don't have an ID yet
-      let quizId = currentQuizId;
-      if (!quizId) {
-        const { data: quiz, error: quizError } = await supabase
-          .from("quizzes")
-          .insert([
-            {
-              user_id: authData.user.id,
-              name: quizName,
-              description: quizDescription,
-              public_visibility: publicVisibility,
-              join_code: Math.random().toString(36).substring(2, 8),
-              quiz_cover_url: coverURL,
-            },
-          ])
-          .select()
-          .single();
-
-        if (quizError) throw quizError;
-        setCurrentQuizId(quiz.quiz_id);
-        quizId = quiz.quiz_id;
+      const { data: authData, error: authError } =
+        await supabase.auth.getUser();
+      if (authError || !authData?.user || !quizId) {
+        console.error("Authentication error or missing quiz ID");
+        return;
       }
 
-      // Insert question to the same quiz
+      // Filter out null URLs and get only the uploaded image URLs
+      const imageUrls = images
+        .map((img) => img.url)
+        .filter((url): url is string => url !== null);
+
       const { data: question, error: questionsError } = await supabase
         .from("questions")
         .insert([
           {
-            quiz_id: quizId, // Use existing quiz ID
+            quiz_id: quizId,
             question_type: "slideshow",
             question_text: quizQuestion,
-            image_urls: imageURL,
+            image_urls: imageUrls,
             video_url: null,
             is_active: true,
           },
@@ -215,7 +149,6 @@ const SlideShowPage = () => {
 
       if (questionsError) throw questionsError;
 
-      // Insert options
       const optionInserts = options.map((option) => ({
         question_id: question.question_id,
         option_text: option.text,
@@ -229,113 +162,73 @@ const SlideShowPage = () => {
 
       if (optionsError) throw optionsError;
 
-      handleClear(); // Clear question-specific fields only
+      handleClear();
+
+      // Redirect back to quiz builder with question metadata and updated question number
+      router.push(
+        `/create/quizbuilder?quizId=${quizId}&questionId=${question.question_id}&questionText=${encodeURIComponent(
+          question.question_text,
+        )}&questionType=slideshow&questionNum=${nextNum}`,
+      );
     } catch (error) {
       console.error("Error:", error);
     }
   };
 
-  const handleLeaveClick = () => {
-    const confirmLeave = confirm(
-      "You're about to leave this page!! Changes will not be saved :(\n\nClick OK to leave or Cancel to stay.",
-    );
-
-    if (confirmLeave) {
-      router.push("/create");
-    }
+  const handleCheckbox = (index: number) => {
+    const updatedOptions = [...options];
+    updatedOptions[index].isCorrect = !updatedOptions[index].isCorrect;
+    setOptions(updatedOptions);
   };
 
   return (
     <div className="h-full bg-[#f6f8d5]">
       <h1 className="pb-5 pt-7 text-center text-3xl font-bold text-[#205781]">
-        Quiz Type: Slideshow Quiz
-      </h1>
-
-      <h1 className="pb-5 text-center text-xl font-bold text-[#205781]">
-        Drop your quiz cover below!
-      </h1>
-
-      <div
-        onDrop={handleCoverDrop}
-        onDragOver={handleDragOver}
-        className="mx-auto flex h-64 w-[80%] items-center justify-center rounded-xl border-4 border-dashed border-[#205781] text-center text-[#205781] transition duration-200 ease-linear hover:bg-[#98D2C0]"
-      >
-        {coverSrc ? (
-          <img src={coverSrc} alt="Dropped" className="max-h-full max-w-full" />
-        ) : (
-          <p className="text-lg font-medium">
-            &#x2295; Drag & drop an image here!
-          </p>
-        )}
-      </div>
-
-      <div className="flex justify-center gap-4 py-6">
-        <Button
-          className="w-auto border-[3px] border-[#205781] bg-[#f6f8d5] text-xl font-bold text-[#205781] transition-all duration-300 ease-linear hover:bg-[#205781] hover:text-[#f6f8d5]"
-          onClick={() => document.getElementById("fileCoverInput")?.click()}
-        >
-          &#128193; Browse Files
-        </Button>
-        <input
-          id="fileCoverInput"
-          type="file"
-          accept="image/*"
-          onChange={handleFileCoverSelect}
-          className="hidden"
-        />
-      </div>
-
-      <div className="flex items-center justify-center gap-6">
-        <Input
-          value={quizName}
-          onChange={(e) => setQuizName(e.target.value)}
-          className="h-15 w-[150px] border-[3px] border-[#205781] bg-[#f6f8d5] font-bold text-[#205781] transition-all duration-200 ease-linear hover:border-[#98d2c0] md:w-[400px]"
-          placeholder="Enter quiz name"
-        />
-
-        <Input
-          value={quizDescription}
-          onChange={(e) => setQuizDescription(e.target.value)}
-          className="h-15 w-[150px] border-[3px] border-[#205781] bg-[#f6f8d5] font-bold text-[#205781] transition-all duration-200 ease-linear hover:border-[#98d2c0] md:w-[400px]"
-          placeholder="Enter quiz description"
-        />
-      </div>
-
-      <h1 className="pb-5 pt-7 text-center text-3xl font-bold text-[#205781]">
-        Create Slideshow Quiz
+        Create Slideshow Question
       </h1>
       <h1 className="pb-5 text-center text-xl font-bold text-[#205781]">
-        Drop your question image below!
+        Upload up to 4 images for your slideshow
       </h1>
 
-      <div
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        className="mx-auto flex h-64 w-[80%] items-center justify-center rounded-xl border-4 border-dashed border-[#205781] text-center text-[#205781] transition duration-200 ease-linear hover:bg-[#98D2C0]"
-      >
-        {imageSrc ? (
-          <img src={imageSrc} alt="Dropped" className="max-h-full max-w-full" />
-        ) : (
-          <p className="text-lg font-medium">
-            &#x2295; Drag & drop an image here!
-          </p>
-        )}
-      </div>
-
-      <div className="flex justify-center gap-4 py-6">
-        <Button
-          className="w-auto border-[3px] border-[#205781] bg-[#f6f8d5] text-xl font-bold text-[#205781] transition-all duration-300 ease-linear hover:bg-[#205781] hover:text-[#f6f8d5]"
-          onClick={() => document.getElementById("fileInput")?.click()}
-        >
-          &#128193; Browse Files
-        </Button>
-        <input
-          id="fileInput"
-          type="file"
-          accept="image/*"
-          onChange={handleFileSelect}
-          className="hidden"
-        />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {images.map((image, index) => (
+          <div key={index} className="mx-4">
+            <div
+              onDrop={handleDrop(index)}
+              onDragOver={handleDragOver}
+              className="flex h-64 w-full items-center justify-center rounded-xl border-4 border-dashed border-[#205781] text-center text-[#205781] transition duration-200 ease-linear hover:bg-[#98D2C0]"
+            >
+              {image.src ? (
+                <img
+                  src={image.src}
+                  alt={`Slide ${index + 1}`}
+                  className="max-h-full max-w-full"
+                />
+              ) : (
+                <p className="text-lg font-medium">
+                  &#x2295; Drag & drop image {index + 1}
+                </p>
+              )}
+            </div>
+            <div className="flex justify-center pt-2">
+              <Button
+                className="w-auto border-[3px] border-[#205781] bg-[#f6f8d5] text-lg font-bold text-[#205781] transition-all duration-300 ease-linear hover:bg-[#205781] hover:text-[#f6f8d5]"
+                onClick={() =>
+                  document.getElementById(`fileInput-${index}`)?.click()
+                }
+              >
+                &#128193; Browse
+              </Button>
+              <input
+                id={`fileInput-${index}`}
+                type="file"
+                accept="image/*"
+                onChange={handleFileSelect(index)}
+                className="hidden"
+              />
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="flex items-center justify-center bg-[#f6f8d5] pt-5">
@@ -365,34 +258,10 @@ const SlideShowPage = () => {
           </div>
         ))}
       </div>
-
-      <div className="flex items-center justify-center bg-[#f6f8d5] pb-10">
-        <Checkbox
-          checked={publicVisibility}
-          onCheckedChange={(checked) => setPublicVisibility(!!checked)}
-          className="fg-[#f6f8d5] border-[2px] border-[#205781] data-[state=checked]:border-[#205781] data-[state=checked]:bg-[#205781]"
-        />
-        <Label className="pl-3 text-xl font-bold text-[#205781]">
-          Make Public
-        </Label>
-      </div>
-
       <div className="flex justify-center gap-6 bg-[#f6f8d5] pb-48">
         <Button
           type="button"
-          onClick={handleLeaveClick}
-          className="w-35 h-15 border-[3px] border-[#205781] bg-[#f6f8d5] text-xl font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#98D2C0]"
-        >
-          &#x2190; Leave
-        </Button>
-        <Button
-          type="button"
-          onClick={() => {
-            handleDone({ imageURL, coverURL, isFinalSubmit: false });
-            alert(
-              `Question added to "${quizName}"! Continue adding or click Leave to finish.`,
-            );
-          }}
+          onClick={handleDone}
           className="w-35 h-15 border-[3px] border-[#205781] bg-[#f6f8d5] text-xl font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#98D2C0]"
         >
           &#x2295; Add

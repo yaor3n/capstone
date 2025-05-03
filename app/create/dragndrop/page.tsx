@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
-const DragAndDropQuiz = () => {
+const dnd = () => {
   const router = useRouter();
   const supabase = createClient();
 
@@ -22,20 +22,20 @@ const DragAndDropQuiz = () => {
   const [publicVisibility, setPublicVisibility] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Answer options
   const [options, setOptions] = useState([
     { id: 1, text: "", isCorrect: false },
     { id: 2, text: "", isCorrect: false },
     { id: 3, text: "", isCorrect: false },
   ]);
 
-  // Hotspots with associated option IDs
-  const [hotspots, setHotspots] = useState([
-    { x: 25, y: 25, optionId: null },
-    { x: 50, y: 50, optionId: null },
-    { x: 75, y: 75, optionId: null },
+  // middle one is correct when spawn
+  const [hotspots, setHotspots] = useState<
+    { x: number; y: number; isCorrect: boolean }[]
+  >([
+    { x: 25, y: 25, isCorrect: false },
+    { x: 50, y: 50, isCorrect: true },
+    { x: 75, y: 75, isCorrect: false },
   ]);
-
   const imageRef = useRef<HTMLImageElement>(null);
 
   const uploadImage = async (
@@ -46,6 +46,7 @@ const DragAndDropQuiz = () => {
     const bucket = "quiz-images";
     let imageFile = file;
 
+    // Apply 16:9 crop ONLY if not a cover image
     if (!isCover) {
       const imageBitmap = await createImageBitmap(file);
       const canvas = document.createElement("canvas");
@@ -123,7 +124,6 @@ const DragAndDropQuiz = () => {
   }: { isFinalSubmit?: boolean } = {}) => {
     setIsSubmitting(true);
     try {
-      // Validate required fields
       if (
         !quizName.trim() ||
         !quizDescription.trim() ||
@@ -142,21 +142,9 @@ const DragAndDropQuiz = () => {
         return;
       }
 
-      // Validate all options have text
-      if (options.some((option) => !option.text.trim())) {
-        alert("Please fill in all answer options");
-        return;
-      }
-
-      // Validate at least one option is marked as correct
-      if (!options.some((option) => option.isCorrect)) {
-        alert("Please mark one option as correct by clicking on it");
-        return;
-      }
-
-      // Validate all hotspots have an option assigned
-      if (hotspots.some((hotspot) => hotspot.optionId === null)) {
-        alert("Please assign all options to hotspots by dragging them");
+      const correctHotspot = hotspots.find((h) => h.isCorrect);
+      if (!correctHotspot) {
+        alert("Please mark one hotspot as correct by clicking on it");
         return;
       }
 
@@ -204,16 +192,14 @@ const DragAndDropQuiz = () => {
       } else {
         quizId = existingQuizId;
       }
-
       // 2. Save question with image
       const { data: question, error: questionError } = await supabase
         .from("questions")
         .insert([
           {
             quiz_id: quizId,
-            question_type: "drag_and_drop",
-            question_text:
-              quizQuestion || "Match the options to the correct spots",
+            question_type: "image_hotspot",
+            question_text: quizQuestion || "Identify the correct spot",
             image_urls: imageURL,
             video_url: null,
             is_active: true,
@@ -229,33 +215,27 @@ const DragAndDropQuiz = () => {
       }
       questionId = question.question_id;
 
-      // 3. Save all options and their hotspot positions
-      for (const option of options) {
-        const hotspot = hotspots.find((h) => h.optionId === option.id);
-        if (!hotspot) continue;
+      // 3. Save only the correct hotspot
+      const { error: optionsError } = await supabase
+        .from("question_options")
+        .insert([
+          {
+            question_id: questionId,
+            option_text: "Correct hotspot location",
+            // since db pos_x & y is int so cant use /100 need round off to int
+            pos_x: Math.round(correctHotspot.x),
+            pos_y: Math.round(correctHotspot.y),
 
-        const { error: optionsError } = await supabase
-          .from("question_options")
-          .insert([
-            {
-              question_id: questionId,
-              option_text: option.text,
-              pos_x: Math.round(hotspot.x),
-              pos_y: Math.round(hotspot.y),
-              is_correct: option.isCorrect,
-              is_active: true,
-            },
-          ]);
+            is_correct: true,
+            is_active: true,
+          },
+        ]);
 
-        if (optionsError) {
-          console.error("Option Creation Error:", optionsError);
-          await supabase
-            .from("questions")
-            .delete()
-            .eq("question_id", questionId);
-          await supabase.from("quizzes").delete().eq("quiz_id", quizId);
-          throw new Error(`Failed to save option: ${optionsError.message}`);
-        }
+      if (optionsError) {
+        console.error("Hotspot Creation Error:", optionsError);
+        await supabase.from("questions").delete().eq("question_id", questionId);
+        await supabase.from("quizzes").delete().eq("quiz_id", quizId);
+        throw new Error(`Failed to save hotspot: ${optionsError.message}`);
       }
 
       const continueAdding = confirm(
@@ -269,15 +249,10 @@ const DragAndDropQuiz = () => {
         setImageSrc(null);
         setImageURL(null);
         setQuizQuestion("");
-        setOptions([
-          { id: 1, text: "", isCorrect: false },
-          { id: 2, text: "", isCorrect: false },
-          { id: 3, text: "", isCorrect: false },
-        ]);
         setHotspots([
-          { x: 25, y: 25, optionId: null },
-          { x: 50, y: 50, optionId: null },
-          { x: 75, y: 75, optionId: null },
+          { x: 25, y: 25, isCorrect: false },
+          { x: 50, y: 50, isCorrect: true },
+          { x: 75, y: 75, isCorrect: false },
         ]);
       }
     } catch (error) {
@@ -287,6 +262,7 @@ const DragAndDropQuiz = () => {
         quizName,
         hasImage: !!imageURL,
         hasCover: !!coverURL,
+        hotspotCount: hotspots.length,
       });
       alert(
         `Failed to save: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -328,58 +304,58 @@ const DragAndDropQuiz = () => {
     }
   };
 
+  // clear btn
   const handleClear = () => {
     setImageSrc(null);
     setImageURL(null);
     setCoverSrc(null);
     setCoverURL(null);
     setQuizQuestion("");
-    setOptions([
-      { id: 1, text: "", isCorrect: false },
-      { id: 2, text: "", isCorrect: false },
-      { id: 3, text: "", isCorrect: false },
-    ]);
     setHotspots([
-      { x: 25, y: 25, optionId: null },
-      { x: 50, y: 50, optionId: null },
-      { x: 75, y: 75, optionId: null },
+      { x: 25, y: 25, isCorrect: false },
+      { x: 50, y: 50, isCorrect: true },
+      { x: 75, y: 75, isCorrect: false },
     ]);
   };
 
-  const handleOptionChange = (id: number, text: string) => {
-    setOptions(
-      options.map((option) =>
-        option.id === id ? { ...option, text } : option,
-      ),
-    );
-  };
-
-  const toggleCorrectOption = (id: number) => {
-    setOptions(
-      options.map((option) => ({
-        ...option,
-        isCorrect: option.id === id,
+  //  handle setting the correct hotspot
+  //  it updates hotspots state so even if middle is true by default once any is clicked it will make others false
+  const setCorrectHotspot = (index: number) => {
+    setHotspots((prevHotspots) =>
+      prevHotspots.map((hotspot, i) => ({
+        ...hotspot,
+        isCorrect: i === index,
       })),
     );
   };
 
-  const handleHotspotDrop = (hotspotIndex: number, e: React.DragEvent) => {
-    e.preventDefault();
-    const optionId = parseInt(e.dataTransfer.getData("optionId"));
+  const handleHotspotInteraction = (index: number, e: React.MouseEvent) => {
+    // If it's a click (not drag), set as correct
+    if (e.type === "click") {
+      setCorrectHotspot(index);
+      return;
+    }
 
-    setHotspots(
-      hotspots.map((hotspot, index) =>
-        index === hotspotIndex
-          ? { ...hotspot, optionId }
-          : hotspot.optionId === optionId
-            ? { ...hotspot, optionId: null }
-            : hotspot,
-      ),
+    // Otherwise handle movement
+    if (!imageRef.current) return;
+
+    const img = imageRef.current;
+    const rect = img.getBoundingClientRect();
+
+    const x = Math.max(
+      0,
+      Math.min(100, ((e.clientX - rect.left) / rect.width) * 100),
     );
-  };
+    const y = Math.max(
+      0,
+      Math.min(100, ((e.clientY - rect.top) / rect.height) * 100),
+    );
 
-  const handleOptionDragStart = (optionId: number, e: React.DragEvent) => {
-    e.dataTransfer.setData("optionId", optionId.toString());
+    setHotspots((prev) => {
+      const newHotspots = [...prev];
+      newHotspots[index] = { ...newHotspots[index], x, y };
+      return newHotspots;
+    });
   };
 
   const handleLeaveClick = () => {
@@ -391,12 +367,11 @@ const DragAndDropQuiz = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f5d5]">
+    <div className="min-h-screen bg-[#f6f8d5]">
       <h1 className="pb-5 pt-7 text-center text-3xl font-bold text-[#205781]">
-        Quiz Type: Drag and Drop Quiz
+        Quiz Type: Image Hotspot Quiz
       </h1>
 
-      {/* Cover Image Upload (same as before) */}
       <div className="space-y-4">
         <h2 className="text-center text-xl font-bold text-[#205781]">
           Drop your quiz cover below!
@@ -433,7 +408,7 @@ const DragAndDropQuiz = () => {
               if (e.target.files?.[0]) {
                 await handleCoverDrop({
                   dataTransfer: { files: [e.target.files[0]] },
-                  preventDefault: () => {},
+                  preventDefault: () => { },
                 } as unknown as React.DragEvent<HTMLDivElement>);
               }
             }}
@@ -442,7 +417,6 @@ const DragAndDropQuiz = () => {
         </div>
       </div>
 
-      {/* Quiz Name and Description */}
       <div className="mx-auto mt-8 flex w-[80%] flex-col gap-4 md:flex-row">
         <Input
           value={quizName}
@@ -458,7 +432,6 @@ const DragAndDropQuiz = () => {
         />
       </div>
 
-      {/* Answer Options */}
       <div className="mx-auto mt-8 w-[80%] space-y-4">
         <h2 className="text-center text-xl font-bold text-[#205781]">
           Answer Options (click to mark as correct)
@@ -468,9 +441,8 @@ const DragAndDropQuiz = () => {
             <div
               draggable
               onDragStart={(e) => handleOptionDragStart(option.id, e)}
-              className={`flex-1 cursor-move rounded-lg p-3 ${
-                option.isCorrect ? "bg-green-200" : "bg-white"
-              }`}
+              className={`flex-1 cursor-move rounded-lg p-3 ${option.isCorrect ? "bg-green-200" : "bg-white"
+                }`}
               onClick={() => toggleCorrectOption(option.id)}
             >
               <Input
@@ -484,10 +456,10 @@ const DragAndDropQuiz = () => {
         ))}
       </div>
 
-      {/* Drag and Drop Area */}
-      <div className="mt-8 space-y-4">
+      <div className="mt-8 space-y-4 bg-[#f6f5d5]">
         <h2 className="text-center text-xl font-bold text-[#205781]">
-          Drag and Drop Question
+          Create your hotspot question <br /> (click one of the dots to set as
+          ans)
         </h2>
         <div className="mx-auto w-[90%] max-w-[800px] overflow-hidden rounded-xl border-4 border-dashed border-[#205781] bg-[#f6f8d5]">
           <div className="relative aspect-[16/9] w-full">
@@ -503,25 +475,37 @@ const DragAndDropQuiz = () => {
                   alt="Question image"
                   className="h-full w-full object-cover"
                 />
-                {hotspots.map((hotspot, index) => (
+                {hotspots.map((spot, i) => (
                   <div
-                    key={index}
-                    className={`absolute h-12 w-12 -translate-x-1/2 -translate-y-1/2 rounded-full ${
-                      hotspot.optionId ? "bg-green-500" : "bg-blue-500"
-                    } flex items-center justify-center text-white`}
+                    key={i}
+                    className={`absolute h-8 w-8 -translate-x-1/2 -translate-y-1/2 cursor-move rounded-full ${spot.isCorrect
+                        ? "bg-red-500 ring-2 ring-white"
+                        : "bg-blue-500"
+                      }`}
                     style={{
-                      left: `${hotspot.x}%`,
-                      top: `${hotspot.y}%`,
+                      left: `${spot.x}%`,
+                      top: `${spot.y}%`,
+                      transform: "translate(-50%, -50%)",
                     }}
-                    onDrop={(e) => handleHotspotDrop(index, e)}
-                    onDragOver={(e) => e.preventDefault()}
-                  >
-                    {hotspot.optionId ? (
-                      <span className="font-bold">{hotspot.optionId}</span>
-                    ) : (
-                      <span className="text-xs">Drop here</span>
-                    )}
-                  </div>
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      const move = (e: MouseEvent) =>
+                        handleHotspotInteraction(
+                          i,
+                          e as unknown as React.MouseEvent,
+                        );
+                      const cleanup = () => {
+                        window.removeEventListener("mousemove", move);
+                        window.removeEventListener("mouseup", cleanup);
+                      };
+                      window.addEventListener("mousemove", move);
+                      window.addEventListener("mouseup", cleanup);
+                    }}
+                    onClick={(e) => handleHotspotInteraction(i, e)}
+                    title={
+                      spot.isCorrect ? "Correct answer" : "Mark as correct"
+                    }
+                  />
                 ))}
               </div>
             ) : (
@@ -538,7 +522,7 @@ const DragAndDropQuiz = () => {
           </div>
         </div>
 
-        <div className="flex justify-center">
+        <div className="flex justify-center bg-[#f6f8d5]">
           <Button
             className="border-[3px] border-[#205781] bg-[#f6f8d5] text-[#205781] hover:bg-[#205781] hover:text-[#f6f8d5]"
             onClick={() => document.getElementById("questionInput")?.click()}
@@ -553,27 +537,24 @@ const DragAndDropQuiz = () => {
               if (e.target.files?.[0]) {
                 await handleImageDrop({
                   dataTransfer: { files: [e.target.files[0]] },
-                  preventDefault: () => {},
+                  preventDefault: () => { },
                 } as unknown as React.DragEvent<HTMLDivElement>);
               }
             }}
-            className="hidden"
+            className="hidden bg-[#f6f5d5]"
           />
         </div>
       </div>
-
-      {/* Question Input */}
-      <div className="mt-4 flex justify-center">
+      <div className="mt-4 flex justify-center bg-[#f6f5d5]">
         <Input
           value={quizQuestion}
           onChange={(e) => setQuizQuestion(e.target.value)}
           className="w-[80%] border-[3px] border-[#205781] bg-[#f6f8d5] font-bold text-[#205781] transition-all duration-200 ease-linear hover:border-[#98d2c0]"
-          placeholder="Enter quiz question (e.g. 'Drag the options to the correct spots')"
+          placeholder="Enter quiz question (e.g. 'Identify the landmarks')"
         />
       </div>
 
-      {/* Public Toggle */}
-      <div className="mt-6 flex justify-center">
+      <div className="mt-6 flex justify-center bg-[#f6f5d5]">
         <div className="flex items-center gap-2">
           <Checkbox
             id="public-toggle"
@@ -587,8 +568,7 @@ const DragAndDropQuiz = () => {
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="mt-8 flex justify-center gap-4 pb-12">
+      <div className="mt-8 flex justify-center gap-4 bg-[#f6f5d5] pb-12">
         <Button
           onClick={handleLeaveClick}
           className="w-35 h-15 border-[3px] border-[#205781] bg-[#f6f8d5] text-xl font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#98D2C0]"
@@ -613,4 +593,4 @@ const DragAndDropQuiz = () => {
   );
 };
 
-export default DragAndDropQuiz;
+export default dnd;

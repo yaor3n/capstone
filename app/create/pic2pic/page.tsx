@@ -20,7 +20,7 @@ const PictureToPictureCreator = () => {
   const [coverSrc, setCoverSrc] = useState<string | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
 
-  // Pairs of images6 pairs)
+  // Pairs of images 4 pairs)
   const [pairs, setPairs] = useState(
     Array(4)
       .fill(null)
