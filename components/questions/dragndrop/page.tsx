@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-const HotspotQuizCreator = () => {
+const dnd = () => {
   const router = useRouter();
   const supabase = createClient();
   const params = useParams();
@@ -17,9 +17,9 @@ const HotspotQuizCreator = () => {
   const [quizQuestion, setQuizQuestion] = useState("");
 
   const [options, setOptions] = useState([
-    { id: 1, text: "", isCorrect: true, x: 25, y: 25 },
-    { id: 2, text: "", isCorrect: false, x: 50, y: 50 },
-    { id: 3, text: "", isCorrect: false, x: 75, y: 75 },
+    { id: 1, text: "", isCorrect: true, x: 25, y: 25, color: "bg-red-500" },
+    { id: 2, text: "", isCorrect: true, x: 50, y: 50, color: "bg-blue-500" },
+    { id: 3, text: "", isCorrect: true, x: 75, y: 75, color: "bg-green-500" },
   ]);
 
   const imageRef = useRef<HTMLImageElement>(null);
@@ -64,8 +64,8 @@ const HotspotQuizCreator = () => {
         return;
       }
 
-      if (!options[0].text) {
-        alert("Please provide text for the correct answer");
+      if (options.some((opt) => !opt.text)) {
+        alert("Please provide text for all answer options");
         return;
       }
 
@@ -74,8 +74,8 @@ const HotspotQuizCreator = () => {
         .insert([
           {
             quiz_id: quizId,
-            question_type: "image_hotspot",
-            question_text: quizQuestion || "Identify the correct spot",
+            question_type: "drag_n_drop",
+            question_text: quizQuestion,
             image_urls: imageURL,
             is_active: true,
           },
@@ -90,10 +90,10 @@ const HotspotQuizCreator = () => {
         .insert(
           options.map((option) => ({
             question_id: question.question_id,
-            option_text: option.text || `Option ${option.id}`,
+            option_text: option.text,
             pos_x: Math.round(option.x),
             pos_y: Math.round(option.y),
-            is_correct: option.isCorrect,
+            is_correct: true, // All options are correct
             is_active: true,
           })),
         );
@@ -132,9 +132,9 @@ const HotspotQuizCreator = () => {
     setImageURL(null);
     setQuizQuestion("");
     setOptions([
-      { id: 1, text: "", isCorrect: true, x: 25, y: 25 },
-      { id: 2, text: "", isCorrect: false, x: 50, y: 50 },
-      { id: 3, text: "", isCorrect: false, x: 75, y: 75 },
+      { id: 1, text: "", isCorrect: true, x: 25, y: 25, color: "bg-red-500" },
+      { id: 2, text: "", isCorrect: true, x: 50, y: 50, color: "bg-blue-500" },
+      { id: 3, text: "", isCorrect: true, x: 75, y: 75, color: "bg-green-500" },
     ]);
   };
 
@@ -180,12 +180,12 @@ const HotspotQuizCreator = () => {
   return (
     <div className="min-h-screen bg-[#98d5c0]">
       <h1 className="pb-5 pt-7 text-center text-3xl font-bold text-[#205781]">
-        Quiz Type: Image Hotspot Quiz
+        Quiz Type: Drag & Drop
       </h1>
 
       <div className="mx-auto mt-8 w-[80%] space-y-4">
         <h2 className="text-center text-xl font-bold text-[#205781]">
-          Answer Options (first one is correct)
+          Answer Options (all correct with different colors)
         </h2>
         {options.map((option) => (
           <div key={option.id} className="flex items-center gap-4">
@@ -193,11 +193,7 @@ const HotspotQuizCreator = () => {
               <Input
                 value={option.text}
                 onChange={(e) => handleOptionChange(option.id, e.target.value)}
-                placeholder={
-                  option.id === 1
-                    ? "Correct answer text"
-                    : `Incorrect option ${option.id - 1}`
-                }
+                placeholder={`Option ${option.id} (${option.color.replace("bg-", "").replace("-500", "")})`}
                 className="border-[#205781] bg-white text-[#205781] hover:border-[#98D2C0]"
               />
             </div>
@@ -207,7 +203,7 @@ const HotspotQuizCreator = () => {
 
       <div className="mt-8 space-y-4">
         <h2 className="text-center text-xl font-bold text-[#205781]">
-          Create your hotspot question
+          Create your drag & drop question
         </h2>
         <div className="mx-auto w-[90%] max-w-[800px] overflow-hidden rounded-xl border-4 border-dashed border-[#205781] bg-[#98d5c0]">
           <div className="relative aspect-[16/9] w-full">
@@ -226,19 +222,13 @@ const HotspotQuizCreator = () => {
                 {options.map((option) => (
                   <div
                     key={option.id}
-                    className={`absolute h-8 w-8 -translate-x-1/2 -translate-y-1/2 cursor-move rounded-full ${
-                      option.isCorrect
-                        ? "bg-red-500 ring-2 ring-white"
-                        : "bg-blue-500"
-                    }`}
+                    className={`absolute h-8 w-8 -translate-x-1/2 -translate-y-1/2 cursor-move rounded-full ${option.color} ring-2 ring-white`}
                     style={{
                       left: `${option.x}%`,
                       top: `${option.y}%`,
                     }}
                     onMouseDown={(e) => handleOptionDrag(option.id, e)}
-                    title={
-                      option.isCorrect ? "Correct hotspot" : "Incorrect hotspot"
-                    }
+                    title={`Option ${option.id} (${option.color.replace("bg-", "").replace("-500", "")})`}
                   />
                 ))}
               </div>
@@ -298,8 +288,10 @@ const HotspotQuizCreator = () => {
         </Button>
 
         <Button
-          onClick={() => handleDone()}
-          disabled={!imageURL || isSubmitting || !options[0].text}
+          onClick={handleDone}
+          disabled={
+            !imageURL || isSubmitting || options.some((opt) => !opt.text)
+          }
           className="w-35 h-15 border-[3px] border-[#205781] bg-white text-xl font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#98D2C0]"
         >
           {isSubmitting ? "Saving..." : "Add Question"}
@@ -315,4 +307,4 @@ const HotspotQuizCreator = () => {
   );
 };
 
-export default HotspotQuizCreator;
+export default dnd;
