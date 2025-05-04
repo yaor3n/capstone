@@ -1,24 +1,18 @@
 "use client";
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/utils/supabase/client";
-import { useSearchParams } from "next/navigation";
 
-const SlideShowPage = () => {
+const SlideShowPage: React.FC = () => {
   const router = useRouter();
   const supabase = createClient();
+  const params = useParams();
+  const quizId = params.quizid as string;
 
-  const searchParams = useSearchParams();
-  const quizId = searchParams.get("quizId");
-
-  const currentNum = parseInt(searchParams.get("questionNum") || "1", 10);
-  const nextNum = currentNum + 1;
-
-  // State for multiple images (up to 4)
   const [images, setImages] = useState<
     Array<{
       src: string | null;
@@ -164,12 +158,7 @@ const SlideShowPage = () => {
 
       handleClear();
 
-      // Redirect back to quiz builder with question metadata and updated question number
-      router.push(
-        `/create/quizbuilder?quizId=${quizId}&questionId=${question.question_id}&questionText=${encodeURIComponent(
-          question.question_text,
-        )}&questionType=slideshow&questionNum=${nextNum}`,
-      );
+      router.push(`/quiz/${quizId}/questions`);
     } catch (error) {
       console.error("Error:", error);
     }
@@ -182,7 +171,7 @@ const SlideShowPage = () => {
   };
 
   return (
-    <div className="h-full bg-[#f6f8d5]">
+    <div className="h-full bg-[#98d5c0]">
       <h1 className="pb-5 pt-7 text-center text-3xl font-bold text-[#205781]">
         Create Slideshow Question
       </h1>
@@ -212,7 +201,7 @@ const SlideShowPage = () => {
             </div>
             <div className="flex justify-center pt-2">
               <Button
-                className="w-auto border-[3px] border-[#205781] bg-[#f6f8d5] text-lg font-bold text-[#205781] transition-all duration-300 ease-linear hover:bg-[#205781] hover:text-[#f6f8d5]"
+                className="w-auto border-[3px] border-[#205781] bg-white text-lg font-bold text-[#205781] transition-all duration-300 ease-linear hover:bg-[#205781] hover:text-[#f6f8d5]"
                 onClick={() =>
                   document.getElementById(`fileInput-${index}`)?.click()
                 }
@@ -231,20 +220,20 @@ const SlideShowPage = () => {
         ))}
       </div>
 
-      <div className="flex items-center justify-center bg-[#f6f8d5] pt-5">
+      <div className="flex items-center justify-center bg-[#98d5c0] pt-5">
         <Input
           value={quizQuestion}
           onChange={(e) => setQuizQuestion(e.target.value)}
-          className="h-15 w-[150px] border-[3px] border-[#205781] bg-[#f6f8d5] font-bold text-[#205781] transition-all duration-200 ease-linear hover:border-[#98d2c0] md:w-[400px]"
+          className="h-15 w-[150px] border-[3px] border-[#205781] bg-white font-bold text-[#205781] transition-all duration-200 ease-linear hover:border-[#98d2c0] md:w-[400px]"
           placeholder="Enter quiz Question"
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 bg-[#f6f8d5] pb-10 pl-10 pr-10 pt-5">
+      <div className="grid grid-cols-1 gap-4 bg-[#98d5c0] pb-10 pl-10 pr-10 pt-5">
         {options.map((option, index) => (
           <div key={index} className="flex items-center gap-4">
             <Input
-              className="h-15 border-[3px] border-[#205781] bg-[#f6f8d5] font-bold text-[#205781] transition-all duration-200 ease-linear hover:border-[#98d2c0]"
+              className="h-15 border-[3px] border-[#205781] bg-white font-bold text-[#205781] transition-all duration-200 ease-linear hover:border-[#98d2c0]"
               placeholder={`Option ${index + 1}`}
               value={option.text}
               onChange={(e) => handleOptionChange(index, e.target.value)}
@@ -258,17 +247,23 @@ const SlideShowPage = () => {
           </div>
         ))}
       </div>
-      <div className="flex justify-center gap-6 bg-[#f6f8d5] pb-48">
+      <div className="flex justify-center gap-6 bg-[#98d5c0] pb-48">
+        <Button
+          className="w-35 h-15 border-[3px] border-[#205781] bg-white text-xl font-bold text-[#205781] transition-all duration-300 ease-linear hover:bg-[#205781] hover:text-[#f6f8d5]"
+          onClick={() => router.push(`/quiz/${quizId}/questions`)}
+        >
+          &#x2190; Back
+        </Button>
         <Button
           type="button"
           onClick={handleDone}
-          className="w-35 h-15 border-[3px] border-[#205781] bg-[#f6f8d5] text-xl font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#98D2C0]"
+          className="w-35 h-15 border-[3px] border-[#205781] bg-white text-xl font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#98D2C0]"
         >
           &#x2295; Add
         </Button>
         <Button
           onClick={handleClear}
-          className="w-35 h-15 border-[3px] border-[#205781] bg-[#f6f8d5] text-xl font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#F29898]"
+          className="w-35 h-15 border-[3px] border-[#205781] bg-white text-xl font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#F29898]"
         >
           &#x2715; Clear
         </Button>

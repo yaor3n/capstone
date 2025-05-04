@@ -9,18 +9,9 @@ import { Label } from "@/components/ui/label";
 import { createClient } from "@/utils/supabase/client";
 import { v4 as uuidv4 } from "uuid";
 
-// todo:
-// lecturer is able to select how many questions a quiz contains,
-// within howevermany questions the lecturer selected,
-// each pages contains a drop down that has 6 types of quiz options,
-// once lecturer selects any of the 6, he will be redirected to that quiz type’s creation page
-// amount of questions per quiz will be stored in local storage
-// db insert for quiz metadata after create button is clicked on this page
-
 export default function CreateQuizPage() {
   const [quizName, setQuizName] = useState("");
   const [description, setDescription] = useState("");
-  const [questionNum, setQuestionNum] = useState("");
   const [publicVisibility, setPublicVisibility] = useState(false);
 
   const [coverSrc, setCoverSrc] = useState<string | null>(null);
@@ -38,7 +29,6 @@ export default function CreateQuizPage() {
 
     setUploading(true);
 
-    // Get current user
     const {
       data: { user },
       error: authError,
@@ -53,9 +43,9 @@ export default function CreateQuizPage() {
     const fileExt = coverFile.name.split(".").pop();
     const fileName = `${quizId}.${fileExt}`;
 
-    // 1. Upload to the correct bucket (quiz-images instead of quiz-covers)
+    // 1. Upload to quiz-images
     const { error: uploadError } = await supabase.storage
-      .from("quiz-images") // Changed to quiz-images
+      .from("quiz-images")
       .upload(fileName, coverFile);
 
     if (uploadError) {
@@ -65,9 +55,9 @@ export default function CreateQuizPage() {
       return;
     }
 
-    // 2. Get public URL with better error handling
+    // 2. Get public URL
     const { data: urlData } = supabase.storage
-      .from("quiz-images") // Changed to quiz-images
+      .from("quiz-images")
       .getPublicUrl(fileName);
 
     if (!urlData?.publicUrl) {
@@ -96,16 +86,11 @@ export default function CreateQuizPage() {
       return;
     }
 
-    // Save the number of questions in local storage
-    localStorage.setItem("questionNum", questionNum);
-
     setUploading(false);
-    router.push(
-      `/create/quizbuilder?quizId=${quizId}&questionNum=${questionNum}`,
-    );
+
+    router.push(`/quiz/${quizId}/questions`);
   };
 
-  // Add file validation to the click handler
   const handleCoverClick = () => {
     const input = document.createElement("input");
     input.type = "file";
@@ -129,11 +114,8 @@ export default function CreateQuizPage() {
   const handleClear = () => {
     setQuizName("");
     setDescription("");
-    setQuestionNum("");
     setCoverSrc(null);
     setPublicVisibility(false);
-
-    localStorage.removeItem("questionNum");
   };
 
   return (
@@ -150,20 +132,6 @@ export default function CreateQuizPage() {
         placeholder="Description"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-      />
-
-      <Input
-        type="number"
-        placeholder="Number of Questions (max 50)"
-        value={questionNum}
-        onChange={(e) => {
-          const value = e.target.value;
-          if (/^\d*$/.test(value) && Number(value) <= 50) {
-            setQuestionNum(value);
-          }
-        }}
-        min={1}
-        max={50}
       />
 
       <div className="space-y-4 px-4">
@@ -183,7 +151,7 @@ export default function CreateQuizPage() {
             />
           ) : (
             <p className="text-lg font-normal">
-              &#x2295; Click to drop cover image
+              &#x2295; Click to add cover image
             </p>
           )}
         </div>
@@ -205,21 +173,21 @@ export default function CreateQuizPage() {
 
       <div className="flex justify-center gap-3">
         <Button
-          onClick={() => router.back()}
-          className="w-25 h-10 border-[2px] border-[#205781] bg-[#f6f8d5] text-lg font-semibold text-[#205781] transition duration-300 ease-linear hover:bg-[#205781] hover:text-[#f6f8d5]"
+          onClick={() => router.push("/dashboard/quizzes")}
+          className="w-25 h-10 border-[2px] border-[#205781] bg-[#98D2C0] text-lg font-semibold text-[#205781] transition duration-300 ease-linear hover:bg-[#205781] hover:text-[#f6f8d5]"
         >
           &#8592; Back
         </Button>
         <Button
           onClick={handleCreateQuiz}
           disabled={uploading}
-          className="w-25 h-10 border-[2px] border-[#205781] bg-[#f6f8d5] text-lg font-semibold text-[#205781] transition duration-300 ease-linear hover:bg-[#205781] hover:text-[#f6f8d5]"
+          className="w-25 h-10 border-[2px] border-[#205781] bg-[#98D2C0] text-lg font-semibold text-[#205781] transition duration-300 ease-linear hover:bg-[#205781] hover:text-[#f6f8d5]"
         >
-          {uploading ? "Starting..." : "Create Quiz"}
+          {uploading ? "Starting..." : "Next"}
         </Button>
         <Button
           onClick={handleClear}
-          className="w-25 h-10 border-[2px] border-[#205781] bg-[#f5f8d5] text-lg font-semibold text-[#205781] transition duration-300 ease-linear hover:bg-[#F29898]"
+          className="w-25 h-10 border-[2px] border-[#205781] bg-[#98D2C0] text-lg font-semibold text-[#205781] transition duration-300 ease-linear hover:bg-[#F29898]"
         >
           &#x2715; Clear
         </Button>

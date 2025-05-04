@@ -1,11 +1,7 @@
-"use client";
-import { useRouter } from "next/navigation";
+import React from "react";
 
-export default function QuizPage() {
-  const router = useRouter();
-  return (
-    <>
-      <div className="flex-1 w-full flex flex-col gap-12">Quiz Page</div>
-    </>
-  );
-}
+const page = () => {
+  return <div>page</div>;
+};
+
+export default page;

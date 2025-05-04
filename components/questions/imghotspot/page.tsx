@@ -1,29 +1,21 @@
 "use client";
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-import { useSearchParams } from "next/navigation";
-
-const ImgHotspot = () => {
+const ImgHotspot: React.FC = () => {
   const router = useRouter();
   const supabase = createClient();
+  const params = useParams();
+  const quizId = params.quizid as string;
 
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [imageURL, setImageURL] = useState<string | null>(null);
-  //const [coverSrc, setCoverSrc] = useState<string | null>(null);
-  //const [coverURL, setCoverURL] = useState<string | null>(null);
 
-  //const [quizName, setQuizName] = useState("");
-  //const [quizDescription, setQuizDescription] = useState("");
   const [quizQuestion, setQuizQuestion] = useState("");
-  //const [publicVisibility, setPublicVisibility] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const searchParams = useSearchParams();
-  const quizId = searchParams.get("quizId");
 
   // middle one is correct when spawn
   const [hotspots, setHotspots] = useState<
@@ -96,7 +88,7 @@ const ImgHotspot = () => {
       imageFile = new File([blob], file.name, { type: "image/jpeg" });
     }
 
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from(bucket)
       .upload(fileName, imageFile, {
         cacheControl: "3600",
@@ -172,18 +164,7 @@ const ImgHotspot = () => {
 
       if (optionsError) throw optionsError;
 
-      // Get current question number and calculate next number
-      const currentNum = parseInt(searchParams.get("questionNum") || "1", 10);
-      const nextNum = currentNum + 1;
-
-      // Redirect back to quiz builder with question metadata
-      router.push(
-        `/create/quizbuilder?quizId=${quizId}` +
-          `&questionId=${question.question_id}` +
-          `&questionText=${encodeURIComponent(question.question_text)}` +
-          `&questionType=image_hotspot` +
-          `&questionNum=${nextNum}`,
-      );
+      router.push(`/quiz/${quizId}/questions`);
     } catch (error) {
       console.error("Submission error:", error);
       alert(
@@ -262,17 +243,17 @@ const ImgHotspot = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f8d5]">
+    <div className="min-h-screen bg-[#98d5c0]">
       <h1 className="pb-5 pt-7 text-center text-3xl font-bold text-[#205781]">
         Quiz Type: Image Hotspot Quiz
       </h1>
 
-      <div className="mt-8 space-y-4 bg-[#f6f5d5]">
+      <div className="mt-8 space-y-4 bg-[#98d5c0]">
         <h2 className="text-center text-xl font-bold text-[#205781]">
           Create your hotspot question <br /> (click one of the dots to set as
           ans)
         </h2>
-        <div className="mx-auto w-[90%] max-w-[800px] overflow-hidden rounded-xl border-4 border-dashed border-[#205781] bg-[#f6f8d5]">
+        <div className="mx-auto w-[90%] max-w-[800px] overflow-hidden rounded-xl border-4 border-dashed border-[#205781] bg-[#98d5c0]">
           <div className="relative aspect-[16/9] w-full">
             {imageSrc ? (
               <div
@@ -334,9 +315,9 @@ const ImgHotspot = () => {
           </div>
         </div>
 
-        <div className="flex justify-center bg-[#f6f8d5]">
+        <div className="flex justify-center bg-[#98d5c0]">
           <Button
-            className="border-[3px] border-[#205781] bg-[#f6f8d5] text-[#205781] hover:bg-[#205781] hover:text-[#f6f8d5]"
+            className="border-[3px] border-[#205781] bg-white text-[#205781] hover:bg-[#205781] hover:text-[#f6f8d5]"
             onClick={() => document.getElementById("questionInput")?.click()}
           >
             Browse Question Image
@@ -353,30 +334,36 @@ const ImgHotspot = () => {
                 } as unknown as React.DragEvent<HTMLDivElement>);
               }
             }}
-            className="hidden bg-[#f6f5d5]"
+            className="hidden"
           />
         </div>
       </div>
-      <div className="mt-4 flex justify-center bg-[#f6f5d5]">
+      <div className="mt-4 flex justify-center bg-[#98d5c0]">
         <Input
           value={quizQuestion}
           onChange={(e) => setQuizQuestion(e.target.value)}
-          className="w-[80%] border-[3px] border-[#205781] bg-[#f6f8d5] font-bold text-[#205781] transition-all duration-200 ease-linear hover:border-[#98d2c0]"
+          className="w-[80%] border-[3px] border-[#205781] bg-white font-bold text-[#205781] transition-all duration-200 ease-linear hover:border-[#98d2c0]"
           placeholder="Enter quiz question (e.g. 'Identify the landmarks')"
         />
       </div>
 
-      <div className="mt-8 flex justify-center gap-4 bg-[#f6f5d5] pb-12">
+      <div className="mt-8 flex justify-center gap-4 bg-[#98d5c0] pb-12">
+        <Button
+          className="w-35 h-15 border-[3px] border-[#205781] bg-white text-xl font-bold text-[#205781] transition-all duration-300 ease-linear hover:bg-[#205781] hover:text-[#f6f8d5]"
+          onClick={() => router.push(`/quiz/${quizId}/questions`)}
+        >
+          &#x2190; Back
+        </Button>
         <Button
           onClick={() => handleDone()}
           disabled={!imageURL || isSubmitting}
-          className="w-35 h-15 border-[3px] border-[#205781] bg-[#f6f8d5] text-xl font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#98D2C0]"
+          className="w-35 h-15 border-[3px] border-[#205781] bg-white text-xl font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#98D2C0]"
         >
           {isSubmitting ? "Saving..." : "Add Question"}
         </Button>
         <Button
           onClick={handleClear}
-          className="w-35 h-15 border-[3px] border-[#205781] bg-[#f6f8d5] text-xl font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#F29898]"
+          className="w-35 h-15 border-[3px] border-[#205781] bg-white text-xl font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#F29898]"
         >
           Clear
         </Button>

@@ -1,23 +1,19 @@
 "use client";
 import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/client";
-import { useSearchParams } from "next/navigation";
 
 const WhichOfImg = () => {
   const router = useRouter();
   const supabase = createClient();
-  const searchParams = useSearchParams();
-  const quizId = searchParams.get("quizId");
-  const currentNum = parseInt(searchParams.get("questionNum") || "1", 10);
-  const nextNum = currentNum + 1;
+  const params = useParams();
+  const quizId = params.quizid as string;
 
   const [quizQuestion, setQuizQuestion] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // For the 4 answer images
   const [answerImages, setAnswerImages] = useState<
     { src: string | null; file: File | null; isCorrect: boolean }[]
   >(Array(4).fill({ src: null, file: null, isCorrect: false }));
@@ -43,7 +39,6 @@ const WhichOfImg = () => {
   const handleDone = async () => {
     setIsSubmitting(true);
     try {
-      // Validate all fields
       if (
         !quizQuestion.trim() ||
         answerImages.some((img) => !img.file) ||
@@ -60,7 +55,6 @@ const WhichOfImg = () => {
         return;
       }
 
-      // Upload all answer images
       const answerUrls = await Promise.all(
         answerImages.map((img) => {
           if (!img.file) throw new Error("Missing image file");
@@ -99,14 +93,7 @@ const WhichOfImg = () => {
 
       if (optionsError) throw optionsError;
 
-      // Redirect back to quiz builder with question metadata
-      router.push(
-        `/create/quizbuilder?quizId=${quizId}` +
-          `&questionId=${question.question_id}` +
-          `&questionText=${encodeURIComponent(question.question_text)}` +
-          `&questionType=which_of_images` +
-          `&questionNum=${nextNum}`,
-      );
+      router.push(`/quiz/${quizId}/questions`);
     } catch (error) {
       console.error("Submission error:", error);
       alert(
@@ -145,7 +132,7 @@ const WhichOfImg = () => {
   };
 
   return (
-    <div className="bg-[#f6f8d5] pb-40 pt-20">
+    <div className="bg-[#98d5c0] pb-40 pt-20">
       <div className="space-y-4 px-4">
         <h1 className="text-center text-3xl font-bold text-[#205781]">
           Create Which of the Image Quiz
@@ -218,22 +205,28 @@ const WhichOfImg = () => {
           value={quizQuestion}
           onChange={(e) => setQuizQuestion(e.target.value)}
           placeholder="Enter your question (e.g. 'Which of these is correct?')"
-          className="border-[#205781] bg-[#f6f8d5] text-[#205781] hover:border-[#98D2C0]"
+          className="border-[#205781] bg-white text-[#205781] hover:border-[#98D2C0]"
         />
       </div>
 
-      <div className="mt-12 flex justify-center gap-6 bg-[#f6f8d5] pb-48">
+      <div className="mt-12 flex justify-center gap-6 bg-[#98d5c0] pb-48">
+        <Button
+          className="w-35 h-15 border-[3px] border-[#205781] bg-white text-xl font-bold text-[#205781] transition-all duration-300 ease-linear hover:bg-[#205781] hover:text-[#f6f8d5]"
+          onClick={() => router.push(`/quiz/${quizId}/questions`)}
+        >
+          &#x2190; Back
+        </Button>
         <Button
           type="button"
           onClick={handleDone}
           disabled={isSubmitting}
-          className="w-35 h-15 border-[3px] border-[#205781] bg-[#f6f8d5] text-xl font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#98D2C0]"
+          className="w-35 h-15 border-[3px] border-[#205781] bg-white text-xl font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#98D2C0]"
         >
           {isSubmitting ? "Adding..." : "\u2295 Add"}
         </Button>
         <Button
           onClick={handleClear}
-          className="w-35 h-15 border-[3px] border-[#205781] bg-[#f6f8d5] text-xl font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#F29898]"
+          className="w-35 h-15 border-[3px] border-[#205781] bg-white text-xl font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#F29898]"
         >
           &#x2715; Clear
         </Button>

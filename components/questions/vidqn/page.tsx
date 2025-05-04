@@ -1,31 +1,23 @@
 "use client";
-import React from "react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import React, { useState } from "react";
+import { useRouter, useParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/client";
-import { useSearchParams } from "next/navigation";
 
-const VidQn = () => {
+const VidQn: React.FC = () => {
   const supabase = createClient();
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const params = useParams();
+  const quizId = params.quizid as string;
 
-  // State for video and question
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
   const [videoURL, setVideoURL] = useState<string | null>(null);
   const [quizQuestion, setQuizQuestion] = useState("");
   const [isUploading, setIsUploading] = useState(false);
 
-  // Get quizId from URL
-  const quizId = searchParams.get("quizId");
-  const currentNum = parseInt(searchParams.get("questionNum") || "1", 10);
-  const nextNum = currentNum + 1;
-
-  // Options state
   const [options, setOptions] = useState([
     { text: "", isCorrect: false },
     { text: "", isCorrect: false },
@@ -33,7 +25,6 @@ const VidQn = () => {
     { text: "", isCorrect: false },
   ]);
 
-  // Video upload function
   const uploadVideo = async (file: File): Promise<string> => {
     const fileName = `${Date.now()}-${file.name}`;
     const { error } = await supabase.storage
@@ -52,19 +43,16 @@ const VidQn = () => {
     return publicUrlData.publicUrl;
   };
 
-  // Handle video upload with validation
   const handleVideoUpload = async (file: File) => {
     try {
       setIsUploading(true);
 
-      // Validate file type
       const validVideoTypes = ["video/mp4", "video/webm", "video/ogg"];
       if (!validVideoTypes.includes(file.type)) {
         alert("Please upload a valid video file (MP4, WebM, or Ogg)");
         return;
       }
 
-      // Validate file size (50MB max)
       const maxSizeMB = 50;
       if (file.size > maxSizeMB * 1024 * 1024) {
         alert(`Video must be smaller than ${maxSizeMB}MB`);
@@ -82,13 +70,11 @@ const VidQn = () => {
     }
   };
 
-  // File input handler
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) await handleVideoUpload(file);
   };
 
-  // Drag and drop handlers
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
@@ -99,7 +85,6 @@ const VidQn = () => {
     e.preventDefault();
   };
 
-  // Option handlers
   const handleOptionChange = (index: number, text: string) => {
     const updatedOptions = [...options];
     updatedOptions[index].text = text;
@@ -112,7 +97,6 @@ const VidQn = () => {
     setOptions(updatedOptions);
   };
 
-  // Clear form
   const handleClear = () => {
     setVideoSrc(null);
     setVideoURL(null);
@@ -125,7 +109,6 @@ const VidQn = () => {
     ]);
   };
 
-  // Save question
   const handleDone = async () => {
     if (!videoURL) {
       alert("Please upload a video first");
@@ -153,7 +136,6 @@ const VidQn = () => {
     }
 
     try {
-      // Insert question
       const { data: question, error: questionsError } = await supabase
         .from("questions")
         .insert([
@@ -170,7 +152,6 @@ const VidQn = () => {
 
       if (questionsError) throw questionsError;
 
-      // Insert options
       const optionInserts = options.map((option) => ({
         question_id: question.question_id,
         option_text: option.text,
@@ -184,14 +165,7 @@ const VidQn = () => {
 
       if (optionsError) throw optionsError;
 
-      // Redirect back to quiz builder
-      router.push(
-        `/create/quizbuilder?quizId=${quizId}` +
-          `&questionId=${question.question_id}` +
-          `&questionText=${encodeURIComponent(quizQuestion)}` +
-          `&questionType=videoqn` +
-          `&questionNum=${nextNum}`,
-      );
+      router.push(`/quiz/${quizId}/questions`);
 
       alert("Question added successfully!");
     } catch (error) {
@@ -201,12 +175,11 @@ const VidQn = () => {
   };
 
   return (
-    <div className="bg-[#f6f8d5]">
+    <div className="bg-[#98d2c0]">
       <h1 className="pb-5 pt-7 text-center text-3xl font-bold text-[#205781]">
         Create Video Question
       </h1>
 
-      {/* Video Upload Area */}
       <div className="pb-5 text-center text-xl font-bold text-[#205781]">
         Drop your question video below! (less than 50mb)
       </div>
@@ -227,10 +200,9 @@ const VidQn = () => {
         )}
       </div>
 
-      {/* Browse Button */}
       <div className="flex justify-center gap-4 py-6">
         <Button
-          className="w-auto border-[3px] border-[#205781] bg-[#f6f8d5] text-xl font-bold text-[#205781] transition-all duration-300 ease-linear hover:bg-[#205781] hover:text-[#f6f8d5]"
+          className="w-auto border-[3px] border-[#205781] bg-[#98d2c0] text-xl font-bold text-[#205781] transition-all duration-300 ease-linear hover:bg-[#205781] hover:text-[#f6f8d5]"
           onClick={() => document.getElementById("fileInput")?.click()}
           disabled={isUploading}
         >
@@ -246,22 +218,20 @@ const VidQn = () => {
         />
       </div>
 
-      {/* Question Input */}
-      <div className="flex items-center justify-center bg-[#f6f8d5] pt-5">
+      <div className="flex items-center justify-center bg-[#98d2c0] pt-5">
         <Input
           value={quizQuestion}
           onChange={(e) => setQuizQuestion(e.target.value)}
-          className="h-15 w-[150px] border-[3px] border-[#205781] bg-[#f6f8d5] font-bold text-[#205781] transition-all duration-200 ease-linear hover:border-[#98d2c0] md:w-[400px]"
+          className="h-15 w-[150px] border-[3px] border-[#205781] bg-white font-bold text-[#205781] transition-all duration-200 ease-linear hover:border-[#98d2c0] md:w-[400px]"
           placeholder="Enter quiz question"
         />
       </div>
 
-      {/* Options */}
-      <div className="grid grid-cols-1 gap-4 bg-[#f6f8d5] pb-10 pl-10 pr-10 pt-5">
+      <div className="grid grid-cols-1 gap-4 bg-[#98d2c0] pb-10 pl-10 pr-10 pt-5">
         {options.map((option, index) => (
           <div key={index} className="flex items-center gap-4">
             <Input
-              className="h-15 border-[3px] border-[#205781] bg-[#f6f8d5] font-bold text-[#205781] transition-all duration-200 ease-linear hover:border-[#98d2c0]"
+              className="h-15 border-[3px] border-[#205781] bg-white font-bold text-[#205781] transition-all duration-200 ease-linear hover:border-[#98d2c0]"
               placeholder={`Option ${index + 1}`}
               value={option.text}
               onChange={(e) => handleOptionChange(index, e.target.value)}
@@ -276,18 +246,23 @@ const VidQn = () => {
         ))}
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex justify-center gap-6 bg-[#f6f8d5] pb-48">
+      <div className="flex justify-center gap-6 bg-[#98d2c0] pb-48">
+        <Button
+          className="w-35 h-15 border-[3px] border-[#205781] bg-white text-xl font-bold text-[#205781] transition-all duration-300 ease-linear hover:bg-[#205781] hover:text-[#f6f8d5]"
+          onClick={() => router.push(`/quiz/${quizId}/questions`)}
+        >
+          &#x2190; Back
+        </Button>
         <Button
           onClick={handleDone}
-          className="w-35 h-15 border-[3px] border-[#205781] bg-[#f6f8d5] text-xl font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#98D2C0]"
+          className="w-35 h-15 border-[3px] border-[#205781] bg-white text-xl font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#98D2C0]"
           disabled={isUploading}
         >
           &#x2295; Add
         </Button>
         <Button
           onClick={handleClear}
-          className="w-35 h-15 border-[3px] border-[#205781] bg-[#f6f8d5] text-xl font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#F29898]"
+          className="w-35 h-15 border-[3px] border-[#205781] bg-white text-xl font-bold text-[#205781] transition duration-300 ease-linear hover:bg-[#F29898]"
         >
           &#x2715; Clear
         </Button>
